@@ -8,7 +8,7 @@ import { useAuth } from "../../contexts/AuthContext";
 export default function MainLayout() {
   const router = useRouter();
   const segments = useSegments();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   // Get the current route (e.g., "home", "profile", etc.)
   const current = segments[segments.length - 1];
 
@@ -34,18 +34,21 @@ export default function MainLayout() {
   }
 
   // Only show layout for these pages
-  const showLayout = ["home", "profile", "favourite", "history"].includes(current);
+  const showLayout = ["home", "home1", "profile", "favourite", "history", "history1"].includes(current);
 
   if (!showLayout) {
     // Render only the child page (no top/bottom bar)
     return <Slot />;
   }
 
+  // Determine which home tab to show based on userType
+  const homeRoute = user?.userType === 'seller' ? '/home1' : '/home';
+
   return (
     <View style={styles.container}>
       {/* Top Green Band */}
       <View style={styles.topBar}>
-        <Text style={styles.appName}>AgroLink</Text>
+        <Text style={styles.appName}></Text>
       </View>
 
       {/* Main Content */}
@@ -55,7 +58,7 @@ export default function MainLayout() {
 
       {/* Bottom Navigation Bar */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/home")}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push(homeRoute)}>
           <Ionicons name="home" size={28} color="#22c55e" />
           <Text style={styles.navLabel}>Home</Text>
         </TouchableOpacity>
@@ -84,7 +87,7 @@ const styles = StyleSheet.create({
   topBar: {
     width: "100%",
     backgroundColor: "#22c55e",
-    paddingTop: 48,
+    paddingTop: 1,
     paddingBottom: 18,
     alignItems: "center",
     justifyContent: "center",

@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema({
     email: { type: String, unique: true, sparse: true }, // Made optional initially
     password: { type: String, required: true },
     userType: { type: String, enum: ['buyer', 'seller'], default: 'buyer' }, // Default to buyer
-    
+
     // Common fields
     profileImage: { type: String }, // URL to profile image
     address: { type: String },
@@ -80,6 +80,32 @@ const FeedbackSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const DemandSchema = new mongoose.Schema({
+    buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    productType: { type: String, required: true },
+    productName: { type: String, required: true },
+    quantity: { type: String, required: true },
+    deliveryDate: { type: String, required: true },
+    deliveryLocation: { type: String, required: true },
+    coordinates: {
+        latitude: { type: Number, required: true },
+        longitude: { type: Number, required: true }
+    },
+    status: {
+        type: String,
+        enum: ['active', 'fulfilled', 'cancelled'],
+        default: 'active'
+    },
+    responses: [{
+        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        message: { type: String },
+        price: { type: Number },
+        contactInfo: { type: String },
+        createdAt: { type: Date, default: Date.now }
+    }],
+    createdAt: { type: Date, default: Date.now }
+});
+
 // Export models
 const User = mongoose.model('User', UserSchema);
 const Seller = mongoose.model('Seller', SellerSchema);
@@ -87,6 +113,7 @@ const Session = mongoose.model('Session', SessionSchema);
 const Posting = mongoose.model('Posting', PostingSchema);
 const Order = mongoose.model('Order', OrderSchema);
 const Feedback = mongoose.model('Feedback', FeedbackSchema);
+const Demand = mongoose.model('Demand', DemandSchema);
 
 module.exports = {
     User,
@@ -94,5 +121,6 @@ module.exports = {
     Session,
     Posting,
     Order,
-    Feedback
+    Feedback,
+    Demand
 };

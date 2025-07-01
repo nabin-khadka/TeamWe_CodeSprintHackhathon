@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet,
     Text,
@@ -13,49 +13,122 @@ import {
     Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { demandAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function DemandPage() {
     const router = useRouter();
+    const { isAuthenticated } = useAuth();
     const [productType, setProductType] = useState('');
     const [productName, setProductName] = useState('');
     const [quantity, setQuantity] = useState('');
     const [deliveryDate, setDeliveryDate] = useState('');
     const [deliveryLocation, setDeliveryLocation] = useState('');
-    const [selectedCoordinate, setSelectedCoordinate] = useState(null);
+    const [latitude, setLatitude] = useState('');
+    const [longitude, setLongitude] = useState('');
 
     // Modal states
     const [showProductTypeModal, setShowProductTypeModal] = useState(false);
-    const [showMapModal, setShowMapModal] = useState(false);
 
     const productTypes = ['Fruits', 'Vegetables'];
 
-    const handleSubmitDemand = () => {
+    // Check authentication
+    useEffect(() => {
+        if (!isAuthenticated) {
+            Alert.alert(
+                'Authentication Required',
+                'Please login to post a demand.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => router.replace('/login'),
+                    },
+                ]
+            );
+            return;
+        }
+    }, [isAuthenticated]);
+
+    // Fetch current location and place name on mount
+    useEffect(() => {
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission denied', 'Permission to access location was denied');
+                return;
+            }
+            let location = await Location.getCurrentPositionAsync({});
+            const lat = location.coords.latitude.toString();
+            const lng = location.coords.longitude.toString();
+            setLatitude(lat);
+            setLongitude(lng);
+
+            let placename = '';
+            try {
+                const [place] = await Location.reverseGeocodeAsync({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                });
+                placename = [
+                    place.name,
+                    place.street,
+                    place.city,
+                    place.region,
+                    place.country,
+                ].filter(Boolean).join(', ');
+            } catch (e) {
+                placename = '';
+            }
+            setDeliveryLocation(placename);
+        })();
+    }, []);
+
+    const handleSubmitDemand = async () => {
         // Validate required fields
-        if (!productType || !productName || !quantity || !deliveryDate || !deliveryLocation) {
+        if (!productType || !productName || !quantity || !deliveryDate || !deliveryLocation || !latitude || !longitude) {
             Alert.alert('Missing Information', 'Please fill in all required fields');
             return;
         }
 
-        // Here you would typically send the data to your backend
-        console.log('Demand submitted:', {
+        // Validate coordinates
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        if (isNaN(lat) || isNaN(lng)) {
+            Alert.alert('Invalid Coordinates', 'Please provide valid latitude and longitude values');
+            return;
+        }
+
+        const demandData = {
             productType,
             productName,
             quantity,
             deliveryDate,
             deliveryLocation,
-        });
+            coordinates: {
+                latitude: lat,
+                longitude: lng
+            }
+        };
 
-        Alert.alert(
-            'Demand Posted!',
-            'Your demand has been posted successfully. Sellers will contact you soon.',
-            [
-                {
-                    text: 'OK',
-                    onPress: () => router.back(),
-                },
-            ]
-        );
+        try {
+            const response = await demandAPI.createDemand(demandData);
+
+            Alert.alert(
+                'Demand Posted!',
+                'Your demand has been posted successfully. Sellers will contact you soon.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => router.back(),
+                    },
+                ]
+            );
+        } catch (error) {
+            // Log the error for debugging
+            console.error('Error posting demand:', error);
+            Alert.alert('Error', error instanceof Error ? error.message : 'Failed to post demand. Please try again.');
+        }
     };
 
     const handleProductTypeSelect = (type: string) => {
@@ -132,15 +205,36 @@ export default function DemandPage() {
 
                         {/* Delivery Location */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Delivery Location *</Text>
+                            <Text style={styles.label}>Place Name *</Text>
                             <TextInput
-                                style={[styles.input, styles.textArea]}
-                                placeholder="Enter your full delivery address"
+                                style={styles.input}
+                                placeholder="e.g., Downtown Market, City Center, Street Name"
                                 value={deliveryLocation}
                                 onChangeText={setDeliveryLocation}
-                                multiline
-                                numberOfLines={3}
-                                textAlignVertical="top"
+                            />
+                        </View>
+
+                        {/* Latitude */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Latitude *</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g., 40.7128"
+                                value={latitude}
+                                onChangeText={setLatitude}
+                                keyboardType="numeric"
+                            />
+                        </View>
+
+                        {/* Longitude */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Longitude *</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g., -74.0060"
+                                value={longitude}
+                                onChangeText={setLongitude}
+                                keyboardType="numeric"
                             />
                         </View>
 
@@ -273,6 +367,16 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#6b7280',
     },
+    locationButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    locationText: {
+        fontSize: 16,
+        color: '#1f2937',
+        flex: 1,
+    },
 
     // Modal styles
     modalOverlay: {
@@ -314,5 +418,80 @@ const styles = StyleSheet.create({
         color: '#ef4444',
         textAlign: 'center',
         fontWeight: '600',
+    },
+
+    // Map Modal styles
+    mapModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    mapModalContent: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        marginTop: 50,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+    },
+    mapHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e5e7eb',
+    },
+    mapTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1f2937',
+    },
+    mapCloseButton: {
+        padding: 5,
+    },
+    mapCloseText: {
+        fontSize: 20,
+        color: '#6b7280',
+    },
+    map: {
+        flex: 1,
+    },
+    mapFooter: {
+        flexDirection: 'row',
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#e5e7eb',
+        gap: 10,
+    },
+    mapResetButton: {
+        flex: 1,
+        backgroundColor: '#f3f4f6',
+        borderRadius: 8,
+        paddingVertical: 16,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+    },
+    mapResetText: {
+        color: '#374151',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    mapConfirmButton: {
+        flex: 1,
+        backgroundColor: '#22c55e',
+        borderRadius: 8,
+        paddingVertical: 16,
+        alignItems: 'center',
+    },
+    mapConfirmText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    disabledButton: {
+        backgroundColor: '#9ca3af',
+    },
+    disabledText: {
+        color: '#ffffff',
     },
 });

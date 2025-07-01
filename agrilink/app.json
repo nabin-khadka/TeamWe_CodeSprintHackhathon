@@ -40,6 +40,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "react-native-maps",
+        {
+          "enableGoogleMaps": false
+        }
       ]
     ],
     "experiments": {

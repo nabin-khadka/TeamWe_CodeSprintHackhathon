@@ -9,8 +9,12 @@ import {
   SafeAreaView,
   FlatList,
   Alert,
-  Modal
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Platform
 } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from "expo-router";
 
@@ -34,90 +38,151 @@ interface FavoriteSeller {
   address: string;
 }
 
+// Interface for buyer demands that sellers can see
+interface Demand {
+  id: number;
+  productName: string;
+  quantity: string;
+  buyerName: string;
+  buyerId: number;
+  buyerAddress: string;
+  distance: string;
+  description: string;
+  image: string;
+  postedDate: string;
+}
+
 // These all are fake sabji ko data, like when I make pretend khana for my dolls to eat!
 const mockProducts: Product[] = [
   {
-    id: 1,
-    productName: "Fresh Organic Tomatoes",
-    price: 25.99,
+    id: 101,
+    productName: "Fresh Tomatoes",
+    price: 28,
     sellerName: "Green Valley Farm",
     distance: "2.3 km",
-    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Tomatoes",
-    description: "Fresh organic tomatoes grown without pesticides",
-    sellerId: 101,
-    sellerAddress: "123 Valley Road, Green District"
+    image: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80",
+    description: "Locally grown, juicy and organic tomatoes. Perfect for salads and cooking!",
+    sellerId: 1,
+    sellerAddress: "12 Riverside, Kathmandu"
+  },
+  {
+    id: 102,
+    productName: "Organic Potatoes",
+    price: 22,
+    sellerName: "Mountain Roots",
+    distance: "3.1 km",
+    image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80",
+    description: "Freshly harvested organic potatoes, chemical-free.",
+    sellerId: 2,
+    sellerAddress: "34 Hilltop, Pokhara"
+  },
+  {
+    id: 103,
+    productName: "Basmati Rice",
+    price: 50,
+    sellerName: "RiceLand",
+    distance: "4.5 km",
+    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
+    description: "Premium quality basmati rice, aromatic and long grain.",
+    sellerId: 3,
+    sellerAddress: "78 Lake View, Chitwan"
+  },
+  {
+    id: 104,
+    productName: "Fresh Spinach",
+    price: 18,
+    sellerName: "Leafy Greens",
+    distance: "1.2 km",
+    image: "https://images.unsplash.com/photo-1506084868230-bb9d95c24759?auto=format&fit=crop&w=400&q=80",
+    description: "Crisp and healthy spinach, perfect for salads and cooking.",
+    sellerId: 4,
+    sellerAddress: "56 Green Road, Lalitpur"
+  }
+];
+
+// Mock data for buyer demands that sellers will see
+const mockDemands: Demand[] = [
+  {
+    id: 1,
+    productName: "Organic Potatoes",
+    quantity: "10 kg",
+    buyerName: "Aarav Sharma",
+    buyerId: 201,
+    buyerAddress: "123 Mountain View, Kathmandu",
+    distance: "3.1 km",
+    description: "Looking for fresh organic potatoes for restaurant use",
+    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Potatoes",
+    postedDate: "2025-06-28"
   },
   {
     id: 2,
-    productName: "Premium Rice Grain",
-    price: 45.50,
-    sellerName: "Golden Harvest Co.",
-    distance: "5.1 km",
-    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Rice",
-    description: "High quality basmati rice, freshly harvested",
-    sellerId: 102,
-    sellerAddress: "45 Harvest Lane, Golden Hills"
+    productName: "Fresh Tomatoes",
+    quantity: "5 kg",
+    buyerName: "Priya Gurung",
+    buyerId: 202,
+    buyerAddress: "45 Valley Road, Pokhara",
+    distance: "1.8 km",
+    description: "Need fresh tomatoes for weekly use, prefer locally grown",
+    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Tomatoes",
+    postedDate: "2025-06-29"
   },
   {
     id: 3,
-    productName: "Free Range Eggs",
-    price: 18.00,
-    sellerName: "Happy Hen Farm",
-    distance: "1.8 km",
-    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Eggs",
-    description: "Farm fresh eggs from free-range chickens",
-    sellerId: 103,
-    sellerAddress: "78 Hen Street, Happy Village"
-  },
-  {
-    id: 4,
-    productName: "Organic Fresh Potatoes",
-    price: 30.50,
-    sellerName: "Earthly Delights",
-    distance: "3.2 km",
-    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Potatoes",
-    description: "Freshly harvested organic potatoes, great for any dish",
-    sellerId: 104,
-    sellerAddress: "25 Soil Avenue, Earth Gardens"
-  },
-  {
-    id: 5,
-    productName: "Fresh Green Spinach",
-    price: 15.75,
-    sellerName: "Leafy Greens Co.",
-    distance: "1.5 km",
-    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Spinach",
-    description: "Nutrient-rich green spinach leaves, locally grown",
-    sellerId: 105,
-    sellerAddress: "54 Green Road, Leafy Meadows"
-  },
-  {
-    id: 6,
-    productName: "Grass-Fed Milk",
-    price: 35.00,
-    sellerName: "Pure Dairy Farm",
-    distance: "4.7 km",
-    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Milk",
-    description: "Pure, fresh milk from grass-fed cows with no additives",
-    sellerId: 106,
-    sellerAddress: "120 Meadow Lane, Dairy Valley"
+    productName: "Basmati Rice",
+    quantity: "25 kg",
+    buyerName: "Rajan Thapa",
+    buyerId: 203,
+    buyerAddress: "78 Lake View, Chitwan",
+    distance: "4.5 km",
+    description: "Looking for premium quality basmati rice for restaurant",
+    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Rice",
+    postedDate: "2025-06-30"
   }
 ];
 
 export default function HomePage() {
   const router = useRouter();
-  // Always set to buyer since this is the main home page
-  const [userType] = useState<'buyer'>('buyer');
+  // Check user type from AsyncStorage
+  const [userType, setUserType] = useState<'buyer' | 'seller'>('buyer'); // Default to buyer
   const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [demands, setDemands] = useState<Demand[]>(mockDemands);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
+  const [viewBuyerModalVisible, setViewBuyerModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
   const [favorites, setFavorites] = useState<FavoriteSeller[]>([]);
+  const [favoriteBuyers, setFavoriteBuyers] = useState<{ id: number, name: string, address: string }[]>([]);
 
-  // Load favorites when the component mounts
+  // Image picker states
+  const [isLoading, setIsLoading] = useState(false);
+  const [image, setImage] = useState<string | null>(null);
+  const [classificationResult, setClassificationResult] = useState<string | null>(null);
+  const [suggestedPrice, setSuggestedPrice] = useState<string | null>(null);
+
+  // Product information states
+  const [productName, setProductName] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [quantity, setQuantity] = useState('');
+
+  // Load user type and favorites when the component mounts
   useEffect(() => {
+    loadUserType();
     loadFavorites();
   }, []);
+
+  // Load user type from AsyncStorage
+  const loadUserType = async () => {
+    try {
+      const storedUserType = await AsyncStorage.getItem('userType');
+      if (storedUserType) {
+        setUserType(storedUserType as 'buyer' | 'seller');
+      }
+    } catch (error) {
+      console.error('Error loading user type:', error);
+    }
+  };
 
   // Load favorites from AsyncStorage
   const loadFavorites = async () => {
@@ -125,6 +190,12 @@ export default function HomePage() {
       const storedFavorites = await AsyncStorage.getItem('favorites');
       if (storedFavorites) {
         setFavorites(JSON.parse(storedFavorites));
+      }
+
+      // Load favorite buyers if user is a seller
+      const storedFavoriteBuyers = await AsyncStorage.getItem('favoriteBuyers');
+      if (storedFavoriteBuyers) {
+        setFavoriteBuyers(JSON.parse(storedFavoriteBuyers));
       }
     } catch (error) {
       console.error('Error loading favorites:', error);
@@ -141,10 +212,26 @@ export default function HomePage() {
     }
   };
 
+  // Save favorite buyers to AsyncStorage
+  const saveFavoriteBuyers = async (newFavorites: { id: number, name: string, address: string }[]) => {
+    try {
+      await AsyncStorage.setItem('favoriteBuyers', JSON.stringify(newFavorites));
+      setFavoriteBuyers(newFavorites);
+    } catch (error) {
+      console.error('Error saving favorite buyers:', error);
+    }
+  };
+
   const handleViewProduct = (product: Product) => {
     setSelectedProduct(product);
     setViewModalVisible(true);
     // Yo popup ma sabji ko sabai details dekhaucha, jastai mero school diary ma sabai kura lekheko huncha!
+  };
+
+  const handleViewDemand = (demand: Demand) => {
+    setSelectedDemand(demand);
+    setViewBuyerModalVisible(true);
+    // Yo popup ma buyer ko sabai details dekhaucha!
   };
 
   const handleOrderProduct = (product: Product) => {
@@ -175,6 +262,27 @@ export default function HomePage() {
     }
   };
 
+  // Add a buyer to favorites (for sellers)
+  const addBuyerToFavorites = (demand: Demand) => {
+    const newFavorite = {
+      id: demand.buyerId,
+      name: demand.buyerName,
+      address: demand.buyerAddress
+    };
+
+    // Check if already in favorites
+    const alreadyFavorite = favoriteBuyers.some(fav => fav.id === newFavorite.id);
+
+    if (!alreadyFavorite) {
+      const newFavorites = [...favoriteBuyers, newFavorite];
+      saveFavoriteBuyers(newFavorites);
+      Alert.alert("Added to Favorites", `${demand.buyerName} has been added to your favorites!`);
+      setViewBuyerModalVisible(false);
+    } else {
+      Alert.alert("Already in Favorites", `${demand.buyerName} is already in your favorites!`);
+    }
+  };
+
   const confirmOrder = async () => {
     if (selectedProduct) {
       try {
@@ -188,22 +296,22 @@ export default function HomePage() {
           orderDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
           status: 'pending' as const
         };
-        
+
         // Get existing orders
         const existingOrdersString = await AsyncStorage.getItem('orders');
         const existingOrders = existingOrdersString ? JSON.parse(existingOrdersString) : [];
-        
+
         // Add new order to the list
         const updatedOrders = [newOrder, ...existingOrders];
-        
+
         // Save updated orders back to AsyncStorage
         await AsyncStorage.setItem('orders', JSON.stringify(updatedOrders));
-        
+
         console.log(`Order confirmed for ${selectedProduct.productName}`);
-        
+
         // Close the modal
         setOrderModalVisible(false);
-        
+
         // Navigate to history tab to see the placed order
         router.push("/(tabs)/history");
         // Mero kineko sabji dekhauna lai history page ma janchu!
@@ -217,6 +325,183 @@ export default function HomePage() {
   const handleCreateDemand = () => {
     router.push("/(tabs)/demand");
   };
+
+  const handlePostProduct = () => {
+    router.push("/(tabs)/post-product");
+  };
+
+  // PICKER FUNCTIONS
+
+  // Pick an image from library
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Please grant camera roll permissions to upload a photo');
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0].uri);
+      // Process the image with PyTorch
+      await processImageWithPyTorch(result.assets[0].uri);
+    }
+  };
+
+  // Take a photo
+  const takePhoto = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Required', 'Please grant camera permissions to take a photo');
+      return;
+    }
+
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0].uri);
+      // Process the image with PyTorch
+      await processImageWithPyTorch(result.assets[0].uri);
+    }
+  };
+
+  // Process image with PyTorch AI model
+  const processImageWithPyTorch = async (imageUri: string) => {
+    setIsLoading(true);
+
+    try {
+      // Simulating AI processing since we can't actually run PyTorch here
+      // In a real app, this would send the image to a server or process locally with PyTorch
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
+
+      // Mockup AI classification results
+      const classifications = [
+        'Tomato', 'Potato', 'Rice', 'Onion', 'Garlic', 'Spinach'
+      ];
+      const randomIndex = Math.floor(Math.random() * classifications.length);
+      const result = classifications[randomIndex];
+
+      // Set the classification result
+      setClassificationResult(result);
+
+      // Auto-fill the product name with the classification
+      setProductName(result);
+
+      // Generate a suggested price based on the classification
+      const priceSuggestions: { [key: string]: string } = {
+        'Tomato': '25-30',
+        'Potato': '20-25',
+        'Rice': '45-55',
+        'Onion': '15-20',
+        'Garlic': '40-45',
+        'Spinach': '15-20'
+      };
+
+      setSuggestedPrice(priceSuggestions[result] || '20-30');
+
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert('Error', 'Failed to process image. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Submit the new product
+  const handleSubmit = async () => {
+    if (!productName || !description || !price || !quantity || !image) {
+      Alert.alert('Missing Information', 'Please fill all fields and upload an image');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Create the new product object
+      const newProduct = {
+        id: Math.floor(Math.random() * 10000) + 1000,
+        productName,
+        description,
+        price: parseFloat(price),
+        quantity,
+        image,
+        sellerName: 'Your Farm Name', // This would come from user profile
+        sellerId: 123, // This would come from user authentication
+        sellerAddress: 'Your Address', // This would come from user profile
+        distance: 'Local',
+        postedDate: new Date().toISOString().split('T')[0]
+      };
+
+      // Get existing products
+      const existingProductsString = await AsyncStorage.getItem('myProducts');
+      const existingProducts = existingProductsString ? JSON.parse(existingProductsString) : [];
+
+      // Add new product to the list
+      const updatedProducts = [newProduct, ...existingProducts];
+
+      // Save updated products back to AsyncStorage
+      await AsyncStorage.setItem('myProducts', JSON.stringify(updatedProducts));
+
+      Alert.alert(
+        'Success!',
+        'Your product has been posted',
+        [{ text: 'OK', onPress: () => router.push('/(tabs)/home') }]
+      );
+
+    } catch (error) {
+      console.error('Error saving product:', error);
+      Alert.alert('Error', 'Failed to post product. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Submit a new demand (for buyers)
+  const handleSubmitDemand = async (demandData: {
+    productName: string;
+    quantity: string;
+    description: string;
+    image: string;
+    buyerName: string;
+    buyerId: number;
+    buyerAddress: string;
+    distance: string;
+    postedDate: string;
+  }) => {
+    try {
+      // Replace with your backend endpoint
+      const response = await fetch('http://agrilink.tech/api/demands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(demandData),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Demand post error:', response.status, errorText);
+        throw new Error('Failed to post demand');
+      }
+      // Optionally, refresh local demand list or show success
+      Alert.alert('Success', 'Your demand has been posted!');
+      // You may want to navigate or update state here
+    } catch (error) {
+      console.error('Error posting demand:', error);
+      Alert.alert('Error', 'Could not post your demand.');
+    }
+  };
+
+  // BUYER INTERFACE COMPONENTS
 
   const ProductCard = ({ item }: { item: Product }) => (
     <View style={styles.productCard}>
@@ -255,48 +540,145 @@ export default function HomePage() {
     </View>
   );
 
+  // SELLER INTERFACE COMPONENTS
+
+  const DemandCard = ({ item }: { item: Demand }) => (
+    <View style={styles.productCard}>
+      <View style={styles.sellerInfo}>
+        <View style={styles.sellerAvatar}>
+          <Text style={styles.sellerInitial}>{item.buyerName.charAt(0)}</Text>
+        </View>
+        <View style={styles.sellerDetails}>
+          <Text style={styles.sellerName}>{item.buyerName}</Text>
+          <Text style={styles.distance}>📍 {item.distance} away</Text>
+        </View>
+      </View>
+
+      <Text style={styles.productName}>{item.productName}</Text>
+      <Text style={styles.productQuantity}>Quantity: {item.quantity}</Text>
+      <Text style={styles.productDescription}>{item.description}</Text>
+
+      {item.image && <Image source={{ uri: item.image }} style={styles.productImage} />}
+
+      <View style={styles.productFooter}>
+        <Text style={styles.date}>Posted: {item.postedDate}</Text>
+        <TouchableOpacity
+          style={styles.viewButton}
+          onPress={() => handleViewDemand(item)}
+        >
+          <Text style={styles.viewButtonText}>View Details</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // RENDER BASED ON USER TYPE
   return (
     <SafeAreaView style={styles.container}>
       {/* Yaha mathi app ko naam cha, jastai mero naam tag lagaunu parcha school ma! */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity 
-            style={styles.demandButton}
-            onPress={handleCreateDemand}
-          >
-            <Text style={styles.demandButtonText}>+</Text>
-          </TouchableOpacity>
-
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../../assets/images/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.appName}>AgroLink</Text>
-          </View>
-          
-          {/* Empty view for symmetrical layout */}
-          <View style={styles.demandButton}></View>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../assets/images/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.appName}>AgroLink</Text>
         </View>
       </View>
 
-      {/* Yaha sabai sabji haru cha, jastai mero toys ka collection! */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.feedContainer}>
-          <Text style={styles.feedTitle}>Fresh Products Near You</Text>
-          {/* Yaha sabai sabji ko list cha, jastai ama ko market list! */}
-          <FlatList
-            data={products}
-            renderItem={({ item }) => <ProductCard item={item} />}
-            keyExtractor={(item) => item.id.toString()}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-      </ScrollView>
+      {/* Content based on user type */}
+      {userType === 'buyer' ? (
+        // BUYER VIEW
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Quick Actions for Buyers */}
+          <View style={styles.quickActionsContainer}>
+            <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/demand')}
+              >
+                <Text style={styles.actionButtonIcon}>📝</Text>
+                <Text style={styles.actionButtonText}>Post Demand</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/my-demands')}
+              >
+                <Text style={styles.actionButtonIcon}>📋</Text>
+                <Text style={styles.actionButtonText}>My Demands</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-      {/* Yo popup cha confirm garna lai, jastai mummy le sodhchin "pakka ho?" */}
+          <View style={styles.feedContainer}>
+            <Text style={styles.feedTitle}>Fresh Products Near You</Text>
+            {/* Yaha sabai sabji ko list cha, jastai ama ko market list! */}
+            <FlatList
+              data={products}
+              renderItem={({ item }) => <ProductCard item={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </ScrollView>
+      ) : (
+        // SELLER VIEW
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Quick Actions for Sellers */}
+          <View style={styles.quickActionsContainer}>
+            <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/view-demands')}
+              >
+                <Text style={styles.actionButtonIcon}>👀</Text>
+                <Text style={styles.actionButtonText}>View Demands</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/post-product')}
+              >
+                <Text style={styles.actionButtonIcon}>📦</Text>
+                <Text style={styles.actionButtonText}>Post Product</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/my-products')}
+              >
+                <Text style={styles.actionButtonIcon}>📋</Text>
+                <Text style={styles.actionButtonText}>My Products</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/history1')}
+              >
+                <Text style={styles.actionButtonIcon}>📊</Text>
+                <Text style={styles.actionButtonText}>Orders</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.feedContainer}>
+            <Text style={styles.feedTitle}>Buyer Demands Near You</Text>
+            {/* Yaha sabai buyers ko demand cha, jastai customers ko order list! */}
+            <FlatList
+              data={demands}
+              renderItem={({ item }) => <DemandCard item={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Order Confirmation Modal for Buyers */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -347,7 +729,7 @@ export default function HomePage() {
         </View>
       </Modal>
 
-      {/* Yo popup ma seller ko details dekhaucha, jastai mero teacher ko contact info school diary ma! */}
+      {/* Seller Details Modal for Buyers */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -386,10 +768,52 @@ export default function HomePage() {
         </View>
       </Modal>
 
-      {/* Floating Action Button for creating demand */}
+      {/* Buyer Details Modal for Sellers */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={viewBuyerModalVisible}
+        onRequestClose={() => setViewBuyerModalVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setViewBuyerModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.modalTitle}>Buyer Details</Text>
+
+            {selectedDemand && (
+              <View style={styles.modalContent}>
+                <View style={[styles.sellerAvatar, styles.largeAvatar]}>
+                  <Text style={styles.largeSellerInitial}>{selectedDemand.buyerName.charAt(0)}</Text>
+                </View>
+                <Text style={styles.modalSellerName}>{selectedDemand.buyerName}</Text>
+                <Text style={styles.modalSellerAddress}>📍 {selectedDemand.buyerAddress}</Text>
+                <Text style={styles.modalDistance}>Distance: {selectedDemand.distance}</Text>
+                <Text style={styles.demandDetail}>Product: {selectedDemand.productName}</Text>
+                <Text style={styles.demandDetail}>Quantity: {selectedDemand.quantity}</Text>
+                <Text style={styles.demandDetailLast}>Posted: {selectedDemand.postedDate}</Text>
+
+                <TouchableOpacity
+                  style={styles.addToFavoritesButton}
+                  onPress={() => addBuyerToFavorites(selectedDemand)}
+                >
+                  <Text style={styles.addToFavoritesText}>Add to Favorites</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Floating Action Button for creating demand (buyer) or posting product (seller) */}
       <TouchableOpacity
         style={styles.fabButton}
-        onPress={handleCreateDemand}
+        onPress={userType === 'buyer' ? handleCreateDemand : handlePostProduct}
         activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
@@ -492,6 +916,12 @@ const styles = StyleSheet.create({
     color: "#1f2937",
     marginBottom: 5,
   },
+  productQuantity: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#4b5563",
+    marginBottom: 5,
+  },
   productDescription: {
     fontSize: 14,
     color: "#6b7280",
@@ -513,6 +943,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "#22c55e",
+  },
+  date: {
+    fontSize: 14,
+    color: "#6b7280",
   },
   actionButtons: {
     flexDirection: "row",
@@ -689,6 +1123,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
+  demandDetail: {
+    fontSize: 14,
+    color: "#4b5563",
+    marginBottom: 5,
+    textAlign: "center",
+  },
+  demandDetailLast: {
+    fontSize: 14,
+    color: "#4b5563",
+    marginBottom: 20,
+    textAlign: "center",
+  },
   addToFavoritesButton: {
     backgroundColor: "#22c55e",
     paddingHorizontal: 20,
@@ -722,5 +1168,48 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  quickActionsContainer: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 20,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickActionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  actionButtonIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
   },
 });

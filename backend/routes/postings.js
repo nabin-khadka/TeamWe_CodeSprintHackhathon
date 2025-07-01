@@ -89,4 +89,63 @@ router.get('/:postingId', async (req, res) => {
     }
 });
 
+// Update posting
+router.put('/:postingId', authenticate, sellerOnly, async (req, res) => {
+    try {
+        const { postingId } = req.params;
+        const { title, description, price, category, images, active } = req.body;
+
+        const posting = await Posting.findById(postingId);
+        if (!posting) {
+            return res.status(404).json({ error: 'Posting not found' });
+        }
+
+        // Check if the seller owns this posting
+        if (posting.sellerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: 'Not authorized to update this posting' });
+        }
+
+        // Update fields
+        if (title) posting.title = title;
+        if (description) posting.description = description;
+        if (price) posting.price = price;
+        if (category) posting.category = category;
+        if (images) posting.images = images;
+        if (typeof active === 'boolean') posting.active = active;
+
+        await posting.save();
+
+        res.json({ message: 'Posting updated successfully', posting });
+    } catch (error) {
+        console.error('Update posting error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete posting
+router.delete('/:postingId', authenticate, sellerOnly, async (req, res) => {
+    try {
+        const { postingId } = req.params;
+
+        const posting = await Posting.findById(postingId);
+        if (!posting) {
+            return res.status(404).json({ error: 'Posting not found' });
+        }
+
+        // Check if the seller owns this posting
+        if (posting.sellerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: 'Not authorized to delete this posting' });
+        }
+
+        // Soft delete by setting active to false
+        posting.active = false;
+        await posting.save();
+
+        res.json({ message: 'Posting deleted successfully' });
+    } catch (error) {
+        console.error('Delete posting error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;

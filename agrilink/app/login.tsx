@@ -30,12 +30,18 @@ export default function LoginPage() {
 
         try {
             const response = await authAPI.login({ phone, password });
-            
+
             // Save user data to storage and update AuthContext
             await setUser(response);
 
-            // Navigate to home
-            router.push("/(tabs)/home");
+            // Navigate based on user type
+            if (response?.role === "buyer") {
+                router.push("/(tabs)/home");
+            } else if (response?.role === "seller") {
+                router.push("/(tabs)/home1");
+            } else {
+                Alert.alert("Login Failed", "Unknown user role.");
+            }
 
         } catch (error: any) {
             Alert.alert("Login Failed", error.message || "An error occurred during login");
@@ -83,46 +89,46 @@ export default function LoginPage() {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.content}>
-                <Image
-                    source={require("../assets/images/logo.png")}
-                    style={styles.icon}
-                    resizeMode="contain"
-                />
-                <Text style={styles.title}>Welcome Back!</Text>
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Phone Number"
-                        placeholderTextColor="#888"
-                        value={phone}
-                        onChangeText={handlePhoneChange}
-                        keyboardType="phone-pad"
-                        autoCapitalize="none"
-                        maxLength={14} // +977 + 10 digits
-                    />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        placeholderTextColor="#888"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                    />
-                </View>
-                <TouchableOpacity 
-                    style={[styles.button, isLoading && styles.buttonDisabled]} 
-                    onPress={handleLogin} 
-                    activeOpacity={0.85}
-                    disabled={isLoading}
-                >
-                    <Text style={styles.buttonText}>
-                        {isLoading ? "Logging in..." : "Login"}
-                    </Text>
-                </TouchableOpacity>
-                <Text style={styles.footerText}>
-                    Don't have an account?{" "}
-                    <Text style={styles.signup} onPress={handleSignUp}>Sign Up</Text>
-                </Text>
+                        <Image
+                            source={require("../assets/images/logo.png")}
+                            style={styles.icon}
+                            resizeMode="contain"
+                        />
+                        <Text style={styles.title}>Welcome Back!</Text>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Phone Number"
+                                placeholderTextColor="#888"
+                                value={phone}
+                                onChangeText={handlePhoneChange}
+                                keyboardType="phone-pad"
+                                autoCapitalize="none"
+                                maxLength={14} // +977 + 10 digits
+                            />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Password"
+                                placeholderTextColor="#888"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry
+                            />
+                        </View>
+                        <TouchableOpacity
+                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            onPress={handleLogin}
+                            activeOpacity={0.85}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.buttonText}>
+                                {isLoading ? "Logging in..." : "Login"}
+                            </Text>
+                        </TouchableOpacity>
+                        <Text style={styles.footerText}>
+                            Don't have an account?{" "}
+                            <Text style={styles.signup} onPress={handleSignUp}>Sign Up</Text>
+                        </Text>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
