@@ -24,6 +24,25 @@ interface FavoriteBuyer {
   address: string;
 }
 
+// Mock data for immediate display (demo purposes)
+const mockFavorites: FavoriteBuyer[] = [
+  {
+    id: 1,
+    name: "Aarav Sharma",
+    address: "123 Mountain View, Kathmandu"
+  },
+  {
+    id: 2,
+    name: "Priya Gurung", 
+    address: "45 Valley Road, Pokhara"
+  },
+  {
+    id: 3,
+    name: "Rajan Thapa",
+    address: "78 Lake View, Chitwan"
+  }
+];
+
 export default function FavouriteBuyersPage() {
   const { user, isAuthenticated } = useAuth();
   const [favoriteBuyers, setFavoriteBuyers] = useState<FavoriteBuyer[]>([]);
@@ -32,17 +51,14 @@ export default function FavouriteBuyersPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      loadFavorites();
-    }
-  }, [isAuthenticated]);
+    // Always show data for demo - try API first, then mock data
+    loadFavorites();
+  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      if (isAuthenticated) {
-        loadFavorites();
-      }
-    }, [isAuthenticated])
+      loadFavorites();
+    }, [])
   );
 
   // Load favorites from both API and AsyncStorage
