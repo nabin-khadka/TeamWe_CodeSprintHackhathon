@@ -10,6 +10,7 @@ import {
   FlatList,
   Alert
 } from "react-native";
+import { useRouter } from "expo-router";
 
 // Haii! I am telling about one sabji ko detail, like when I keep my toys in box and write what is inside!
 interface Product {
@@ -54,8 +55,17 @@ const mockProducts: Product[] = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [userType, setUserType] = useState<'buyer' | 'seller'>('buyer'); // Yaha buyer default rakeko chu, paxi login garda real user type ayaucha!
   const [products, setProducts] = useState<Product[]>(mockProducts);
+
+  useEffect(() => {
+    // If user is a buyer, navigate to the buyer-specific home page
+    if (userType === 'buyer') {
+      router.replace('/(tabs)/home-buyer');
+      // Ma buyer chu bhane buyer ko special page ma janchu!
+    }
+  }, [userType, router]);
 
   const handleViewProduct = (productId: number) => {
     Alert.alert("View Product", `Viewing product ${productId}`); // When button dabai then show one popup like "dekhi rahi chu!"

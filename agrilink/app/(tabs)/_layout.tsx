@@ -53,6 +53,14 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
+      {/* Orders tab ma mero sabai kineko sabji cha, jastai ama ko shopping list! */}
+      <Tabs.Screen
+        name="orders"
+        options={{
+          title: 'Orders',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="bag.fill" color={color} />,
+        }}
+      />
       {/* Yaha login page cha but tab ma dekhaudaina, jastai lukeko treasure! */}
       <Tabs.Screen
         name="login"
@@ -74,11 +82,13 @@ export default function TabLayout() {
           href: null, // Hide from tab bar
         }}
       />
-      {/* Home-buyer page lukayeko cha, special buyers ko lagi! */}
+      {/* Home-buyer page for buyer mode, with different icons! */}
       <Tabs.Screen
         name="home-buyer"
         options={{
-          href: null, // Hide from tab bar
+          title: 'Buyer Mode',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="cart.fill" color={color} />,
+          href: null, // Hide from tab bar initially, but can be activated when in buyer mode
         }}
       />
     </Tabs>

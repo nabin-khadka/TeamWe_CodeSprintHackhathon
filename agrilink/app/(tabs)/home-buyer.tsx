@@ -8,8 +8,10 @@ import {
   TouchableOpacity, 
   SafeAreaView,
   FlatList,
-  Alert
+  Alert,
+  Modal
 } from "react-native";
+import { useRouter } from "expo-router";
 
 // Haii! I am telling about one sabji ko detail, like when I keep my toys in box and write what is inside!
 interface Product {
@@ -53,16 +55,37 @@ const mockProducts: Product[] = [
   }
 ];
 
-export default function HomePage() {
-  const [userType, setUserType] = useState<'buyer' | 'seller'>('buyer'); // Yaha buyer default rakeko chu, paxi login garda real user type ayaucha!
+export default function BuyerHomePage() {
+  const router = useRouter();
+  // Always set to buyer since this is specifically the buyer home page
+  const [userType] = useState<'buyer'>('buyer'); // Yo page ma always buyer mode ma chu, jastai ma doll kheldaa doctor baneko!
   const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const handleViewProduct = (productId: number) => {
     Alert.alert("View Product", `Viewing product ${productId}`); // When button dabai then show one popup like "dekhi rahi chu!"
   };
 
-  const handleOrderProduct = (productId: number, productName: string) => {
-    Alert.alert("Order Product", `Ordering ${productName}...`); // Jaba order button dabayau then phone ma message ayaucha "kineko chu!"
+  const handleOrderProduct = (product: Product) => {
+    // Set selected product and show modal
+    setSelectedProduct(product);
+    setModalVisible(true);
+    // Ye modal dekhaucha, jastai mummy le sodhchin "sure ho sabji kinne?" 
+  };
+  
+  const confirmOrder = () => {
+    if (selectedProduct) {
+      // Add order to orders (in a real app, this would save to a database)
+      console.log(`Order confirmed for ${selectedProduct.productName}`);
+      
+      // Close the modal
+      setModalVisible(false);
+      
+      // Navigate to orders tab to see the placed order
+      router.push("/(tabs)/orders");
+      // Mero kineko sabji dekhauna lai orders page ma janchu!
+    }
   };
 
   const ProductCard = ({ item }: { item: Product }) => (
@@ -93,7 +116,7 @@ export default function HomePage() {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.orderButton}
-            onPress={() => handleOrderProduct(item.id, item.productName)}
+            onPress={() => handleOrderProduct(item)}
           >
             <Text style={styles.orderButtonText}>Order</Text>
           </TouchableOpacity>
@@ -118,25 +141,69 @@ export default function HomePage() {
 
       {/* Yaha sabai sabji haru cha, jastai mero toys ka collection! */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {userType === 'buyer' ? (
-          <View style={styles.feedContainer}>
-            <Text style={styles.feedTitle}>Fresh Products Near You</Text>
-            {/* Yaha sabai sabji ko list cha, jastai ama ko market list! */}
-            <FlatList
-              data={products}
-              renderItem={({ item }) => <ProductCard item={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        ) : (
-          <View style={styles.sellerContainer}>
-            <Text style={styles.welcomeText}>Welcome to AgroLink!</Text>
-            <Text style={styles.subtitle}>Start selling your products today</Text>
-          </View>
-        )}
+        <View style={styles.feedContainer}>
+          <Text style={styles.feedTitle}>Fresh Products Near You</Text>
+          {/* Yaha sabai sabji ko list cha, jastai ama ko market list! */}
+          <FlatList
+            data={products}
+            renderItem={({ item }) => <ProductCard item={item} />}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
       </ScrollView>
+
+      {/* Yo popup cha confirm garna lai, jastai mummy le sodhchin "pakka ho?" */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.modalTitle}>Confirm Order</Text>
+            
+            {selectedProduct && (
+              <View style={styles.modalContent}>
+                <Image 
+                  source={{ uri: selectedProduct.image }} 
+                  style={styles.modalImage} 
+                />
+                <Text style={styles.modalProductName}>{selectedProduct.productName}</Text>
+                <Text style={styles.modalPrice}>₹{selectedProduct.price}</Text>
+                <Text style={styles.modalSellerName}>From: {selectedProduct.sellerName}</Text>
+              </View>
+            )}
+            
+            <Text style={styles.confirmText}>Are you sure you want to place this order?</Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonNo]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonNoText}>No</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.button, styles.buttonYes]}
+                onPress={confirmOrder}
+              >
+                <Text style={styles.buttonYesText}>Yes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -302,5 +369,111 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#6b7280",
     textAlign: "center",
+  },
+  // Modal styles - Yo popup ko style cha, jastai mero drawing ko color!
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalView: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 25,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    position: "relative",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 10,
+    right: 15,
+    zIndex: 1,
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: "#6b7280",
+    fontWeight: "bold",
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#22c55e",
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  modalContent: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalImage: {
+    width: "100%",
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  modalProductName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1f2937",
+    marginBottom: 5,
+    textAlign: "center",
+  },
+  modalPrice: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#22c55e",
+    marginBottom: 5,
+  },
+  modalSellerName: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  confirmText: {
+    fontSize: 16,
+    color: "#4b5563",
+    marginBottom: 25,
+    textAlign: "center",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-between",
+  },
+  button: {
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    elevation: 2,
+    minWidth: "40%",
+    alignItems: "center",
+  },
+  buttonYes: {
+    backgroundColor: "#22c55e",
+  },
+  buttonNo: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+  },
+  buttonYesText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  buttonNoText: {
+    color: "#6b7280",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

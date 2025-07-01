@@ -8,7 +8,14 @@ export default function LoginPage() {
     const router = useRouter();
 
     const handleLogin = () => {
-        router.push("/home");
+        // Determine if user is a buyer or seller (in a real app, this would come from authentication)
+        const userType = 'buyer'; // Default to buyer for now
+        
+        if (userType === 'buyer') {
+            router.push("/(tabs)/home-buyer");
+        } else {
+            router.push("/(tabs)/home");
+        }
     };
 
     const handleSignUp = () => {
