@@ -1,7 +1,10 @@
+// @ts-nocheck
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActionSheetIOS, Alert, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView } from "react-native";
+import { ActionSheetIOS, Alert, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, ScrollView, KeyboardAvoidingView } from "react-native";
+import { authAPI, storage } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function RegisterPage() {
     const [photo, setPhoto] = useState<string | null>(null);
@@ -10,7 +13,10 @@ export default function RegisterPage() {
     const [phone, setPhone] = useState("+977");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [userType, setUserType] = useState<'buyer' | 'seller'>('buyer');
+    const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const { setUser } = useAuth();
 
     // Ensure +977 stays at the start and exactly 10 digits after
     const handlePhoneChange = (text: string) => {
@@ -98,10 +104,66 @@ export default function RegisterPage() {
         }
     };
 
-    const handleRegister = () => {
-        // Add your registration logic here
-        alert("Registered!");
-        router.push("/login");
+    const handleRegister = async () => {
+        if (isLoading) return;
+
+        // Basic validation
+        if (!name.trim()) {
+            Alert.alert("Error", "Please enter your name");
+            return;
+        }
+
+        if (!phone || phone.length !== 14) {
+            Alert.alert("Error", "Please enter a valid phone number");
+            return;
+        }
+
+        if (!password) {
+            Alert.alert("Error", "Please enter a password");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            Alert.alert("Error", "Passwords do not match");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const userData = {
+                name: name.trim(),
+                phone,
+                password,
+                confirmPassword,
+                address: address.trim(),
+                profileImage: photo || undefined,
+                userType: userType // Use selected user type
+            };
+
+            const response = await authAPI.register(userData);
+            
+            // Save user data to storage and update AuthContext
+            await setUser(response);
+
+            Alert.alert(
+                "Success", 
+                "Registration successful!", 
+                [
+                    {
+                        text: "OK", 
+                        onPress: () => {
+                            router.push("/(tabs)/home");
+                        }
+                    }
+                ]
+            );
+
+        } catch (error: any) {
+            Alert.alert("Registration Failed", error.message || "An error occurred during registration");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleLogin = () => {
@@ -123,16 +185,24 @@ export default function RegisterPage() {
             </View>
             
             {/* Yaha ma mero naya account banauchu, jastai mero drawing book ma naya drawing! */}
-            <View style={styles.contentContainer}>
-                <TouchableOpacity onPress={handlePickPhoto} style={styles.photoPicker}>
-                    {photo ? (
-                        <Image source={{ uri: photo }} style={styles.photo} />
-                    ) : (
-                        <View style={styles.photoPlaceholder}>
-                            <Text style={{ color: "#aaa" }}>Add Photo</Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+            >
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContainer}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.contentContainer}>
+                        <TouchableOpacity onPress={handlePickPhoto} style={styles.photoPicker}>
+                            {photo ? (
+                                <Image source={{ uri: photo }} style={styles.photo} />
+                            ) : (
+                                <View style={styles.photoPlaceholder}>
+                                    <Text style={{ color: "#aaa" }}>Add Photo</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
                 <Text style={styles.title}>Create Account</Text>
                 <View style={styles.inputContainer}>
                     <TextInput
@@ -159,6 +229,30 @@ export default function RegisterPage() {
                         autoCapitalize="none"
                         maxLength={14}
                     />
+                    
+                    {/* User Type Selector */}
+                    <View style={styles.userTypeContainer}>
+                        <Text style={styles.userTypeLabel}>Account Type:</Text>
+                        <View style={styles.userTypeOptions}>
+                            <TouchableOpacity
+                                style={[styles.userTypeOption, userType === 'buyer' && styles.userTypeOptionSelected]}
+                                onPress={() => setUserType('buyer')}
+                            >
+                                <Text style={[styles.userTypeText, userType === 'buyer' && styles.userTypeTextSelected]}>
+                                    🛒 Buyer
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.userTypeOption, userType === 'seller' && styles.userTypeOptionSelected]}
+                                onPress={() => setUserType('seller')}
+                            >
+                                <Text style={[styles.userTypeText, userType === 'seller' && styles.userTypeTextSelected]}>
+                                    🏪 Seller
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    
                     <TextInput
                         style={styles.input}
                         placeholder="Password"
@@ -176,14 +270,23 @@ export default function RegisterPage() {
                         secureTextEntry
                     />
                 </View>
-                <TouchableOpacity style={styles.button} onPress={handleRegister} activeOpacity={0.85}>
-                    <Text style={styles.buttonText}>Register</Text>
+                <TouchableOpacity 
+                    style={[styles.button, isLoading && styles.buttonDisabled]} 
+                    onPress={handleRegister} 
+                    activeOpacity={0.85}
+                    disabled={isLoading}
+                >
+                    <Text style={styles.buttonText}>
+                        {isLoading ? "Registering..." : "Register"}
+                    </Text>
                 </TouchableOpacity>
                 <Text style={styles.footerText}>
                     Already have an account?{" "}
                     <Text style={styles.signup} onPress={handleLogin}>Login</Text>
                 </Text>
-            </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -192,6 +295,10 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f8f9fa",
+    },
+    scrollContainer: {
+        flexGrow: 1,
+        paddingBottom: 30, // Extra padding at the bottom for better scrolling
     },
     header: {
         backgroundColor: "#ffffff",
@@ -278,6 +385,11 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         marginBottom: 18,
     },
+    buttonDisabled: {
+        backgroundColor: "#9ca3af",
+        elevation: 0,
+        shadowOpacity: 0,
+    },
     buttonText: {
         color: "#fff",
         fontSize: 22,
@@ -314,5 +426,41 @@ const styles = StyleSheet.create({
         backgroundColor: "#f3f4f6",
         alignItems: "center",
         justifyContent: "center",
+    },
+    userTypeContainer: {
+        marginBottom: 16,
+    },
+    userTypeLabel: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#374151",
+        marginBottom: 12,
+    },
+    userTypeOptions: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        gap: 12,
+    },
+    userTypeOption: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: "#e5e7eb",
+        backgroundColor: "#f9fafb",
+        alignItems: "center",
+    },
+    userTypeOptionSelected: {
+        borderColor: "#22c55e",
+        backgroundColor: "#f0fdf4",
+    },
+    userTypeText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#6b7280",
+    },
+    userTypeTextSelected: {
+        color: "#22c55e",
     },
 });

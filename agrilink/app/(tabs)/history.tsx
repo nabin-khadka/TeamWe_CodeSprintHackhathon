@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Image, SafeAreaView, ScrollView, FlatList } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Order {
   id: number;
@@ -43,6 +44,24 @@ const mockOrders: Order[] = [
 ];
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>(mockOrders);
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      const storedOrders = await AsyncStorage.getItem('orders');
+      if (storedOrders) {
+        const parsedOrders = JSON.parse(storedOrders);
+        // Combine with mock orders to always show something
+        setOrders([...parsedOrders, ...mockOrders]);
+      }
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    }
+  };
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'pending': return "#f59e0b"; // Amber
@@ -91,9 +110,9 @@ export default function OrdersPage() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.pageTitle}>Your Orders</Text>
         
-        {mockOrders.length > 0 ? (
+        {orders.length > 0 ? (
           <FlatList
-            data={mockOrders}
+            data={orders}
             renderItem={({ item }) => <OrderCard item={item} />}
             keyExtractor={(item) => item.id.toString()}
             scrollEnabled={false}

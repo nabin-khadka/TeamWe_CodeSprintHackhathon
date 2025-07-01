@@ -1,18 +1,47 @@
+// @ts-nocheck
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView } from "react-native";
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, Alert, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { authAPI, storage } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
     const [phone, setPhone] = useState("+977");
     const [password, setPassword] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const { setUser } = useAuth();
 
-    const handleLogin = () => {
-        // Determine if user is a buyer or seller (in a real app, this would come from authentication)
-        const userType = 'buyer'; // Default to buyer for now
+    const handleLogin = async () => {
+        if (isLoading) return;
 
-        // Navigate to home tab which now includes the buyer functionality
-        router.push("/(tabs)/home");
+        // Basic validation
+        if (!phone || phone.length !== 14) {
+            Alert.alert("Error", "Please enter a valid phone number");
+            return;
+        }
+
+        if (!password) {
+            Alert.alert("Error", "Please enter your password");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const response = await authAPI.login({ phone, password });
+            
+            // Save user data to storage and update AuthContext
+            await setUser(response);
+
+            // Navigate to home
+            router.push("/(tabs)/home");
+
+        } catch (error: any) {
+            Alert.alert("Login Failed", error.message || "An error occurred during login");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSignUp = () => {
@@ -45,7 +74,15 @@ export default function LoginPage() {
             </View>
 
             {/* Yaha ma mero phone number ra password lekhchu, jastai mero secret diary ma! */}
-            <View style={styles.content}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContainer}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.content}>
                 <Image
                     source={require("../assets/images/logo.png")}
                     style={styles.icon}
@@ -72,14 +109,23 @@ export default function LoginPage() {
                         secureTextEntry
                     />
                 </View>
-                <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85}>
-                    <Text style={styles.buttonText}>Login</Text>
+                <TouchableOpacity 
+                    style={[styles.button, isLoading && styles.buttonDisabled]} 
+                    onPress={handleLogin} 
+                    activeOpacity={0.85}
+                    disabled={isLoading}
+                >
+                    <Text style={styles.buttonText}>
+                        {isLoading ? "Logging in..." : "Login"}
+                    </Text>
                 </TouchableOpacity>
                 <Text style={styles.footerText}>
                     Don't have an account?{" "}
                     <Text style={styles.signup} onPress={handleSignUp}>Sign Up</Text>
                 </Text>
-            </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -88,6 +134,10 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f8f9fa",
+    },
+    scrollContainer: {
+        flexGrow: 1,
+        paddingBottom: 30, // Extra padding at the bottom for better scrolling
     },
     header: {
         backgroundColor: "#ffffff",
@@ -173,6 +223,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.18,
         shadowRadius: 8,
         marginBottom: 18,
+    },
+    buttonDisabled: {
+        backgroundColor: "#9ca3af",
+        elevation: 0,
+        shadowOpacity: 0,
     },
     buttonText: {
         color: "#fff",

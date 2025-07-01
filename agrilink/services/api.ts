@@ -1,4 +1,6 @@
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://agrilink.tech';
 
 // API service for authentication
 export const authAPI = {
@@ -83,17 +85,13 @@ export const authAPI = {
   },
 };
 
-// Simple in-memory storage for demo (replace with AsyncStorage in production)
-let userData: any = null;
-let userToken: string | null = null;
-
 // Storage utilities for managing user session
 export const storage = {
   // Save user data to storage
   saveUserData: async (data: any) => {
     try {
-      userData = data;
-      userToken = data.token;
+      await AsyncStorage.setItem('userData', JSON.stringify(data));
+      await AsyncStorage.setItem('userToken', data.token);
     } catch (error) {
       console.error('Save user data error:', error);
     }
@@ -102,7 +100,8 @@ export const storage = {
   // Get user data from storage
   getUserData: async () => {
     try {
-      return userData;
+      const data = await AsyncStorage.getItem('userData');
+      return data ? JSON.parse(data) : null;
     } catch (error) {
       console.error('Get user data error:', error);
       return null;
@@ -112,7 +111,7 @@ export const storage = {
   // Get user token
   getUserToken: async () => {
     try {
-      return userToken;
+      return await AsyncStorage.getItem('userToken');
     } catch (error) {
       console.error('Get user token error:', error);
       return null;
@@ -122,8 +121,7 @@ export const storage = {
   // Clear user data
   clearUserData: async () => {
     try {
-      userData = null;
-      userToken = null;
+      await AsyncStorage.multiRemove(['userData', 'userToken']);
     } catch (error) {
       console.error('Clear user data error:', error);
     }

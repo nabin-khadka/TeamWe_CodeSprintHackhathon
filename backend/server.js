@@ -47,7 +47,7 @@ app.post('/api/ai/evaluate-image', authenticate, async (req, res) => {
     if (!imageUrl) {
       return res.status(400).json({ error: 'Image URL is required' });
     }
-    
+
     // TODO: Implement AI integration
     const aiResponse = await axios.post('http://api.agrilink.tech/evaluate', {
       imageUrl

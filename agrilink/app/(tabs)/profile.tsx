@@ -1,7 +1,47 @@
-import React from "react";
-import { StyleSheet, Text, View, Image, SafeAreaView, ScrollView, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, Text, View, Image, SafeAreaView, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { useRouter } from "expo-router";
+import { authAPI } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function ProfilePage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { user, logout: authLogout, token } = useAuth();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              if (token) {
+                await authAPI.logout(token);
+              }
+              await authLogout();
+              router.push("/login");
+            } catch (error: any) {
+              console.error('Logout error:', error);
+              // Clear local storage even if API call fails
+              await authLogout();
+              router.push("/login");
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
   return (
     <SafeAreaView style={styles.container}>
       {/* Yaha mathi app ko naam cha, jastai mero naam tag lagaunu parcha school ma! */}
@@ -25,9 +65,12 @@ export default function ProfilePage() {
             </View>
           </View>
           
-          <Text style={styles.userName}>User Name</Text>
-          <Text style={styles.userInfo}>+977 9812345678</Text>
-          <Text style={styles.userInfo}>Kathmandu, Nepal</Text>
+          <Text style={styles.userName}>{user?.name || "Guest User"}</Text>
+          <Text style={styles.userInfo}>{user?.phone || "No phone"}</Text>
+          <Text style={styles.userInfo}>{user?.address || "No address"}</Text>
+          <Text style={styles.userType}>
+            {user?.userType === 'seller' ? '🏪 Seller' : '🛒 Buyer'}
+          </Text>
           
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.editButtonText}>Edit Profile</Text>
@@ -52,8 +95,14 @@ export default function ProfilePage() {
               <Text style={styles.menuText}>Help & Support</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.menuItem, styles.logoutButton]}>
-              <Text style={styles.logoutText}>Logout</Text>
+            <TouchableOpacity 
+              style={[styles.menuItem, styles.logoutButton]}
+              onPress={handleLogout}
+              disabled={isLoading}
+            >
+              <Text style={styles.logoutText}>
+                {isLoading ? "Logging out..." : "Logout"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -127,6 +176,13 @@ const styles = StyleSheet.create({
   userInfo: {
     fontSize: 16,
     color: "#666",
+    marginBottom: 4,
+  },
+  userType: {
+    fontSize: 14,
+    color: "#22c55e",
+    fontWeight: "600",
+    marginTop: 5,
     marginBottom: 4,
   },
   editButton: {
