@@ -214,6 +214,16 @@ export default function SellerHomePage() {
       // Get existing seller orders
       const existingOrdersString = await AsyncStorage.getItem('sellerOrders');
       const existingOrders = existingOrdersString ? JSON.parse(existingOrdersString) : [];
+      // Check if this demand is already served (by productName, buyerName, and status 'pending')
+      const alreadyServed = existingOrders.some((order: any) =>
+        order.productName === newOrder.productName &&
+        order.buyerName === newOrder.buyerName &&
+        order.status === 'pending'
+      );
+      if (alreadyServed) {
+        Alert.alert('Already Served', 'You have already served this demand.');
+        return;
+      }
       // Add new order to the list
       const updatedOrders = [newOrder, ...existingOrders];
       // Save updated orders back to AsyncStorage

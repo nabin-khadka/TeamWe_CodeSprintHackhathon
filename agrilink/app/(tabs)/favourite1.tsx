@@ -33,7 +33,7 @@ const mockFavorites: FavoriteBuyer[] = [
   },
   {
     id: 2,
-    name: "Priya Gurung", 
+    name: "Priya Gurung",
     address: "45 Valley Road, Pokhara"
   },
   {
@@ -83,13 +83,16 @@ export default function FavouriteBuyersPage() {
         }
       } catch (apiError) {
         console.error('API favorites error:', apiError);
-        // Fallback to AsyncStorage
-        await loadFavoriteBuyersFromStorage();
+        // Show mock data for demo
+        console.log('API failed, showing mock data for demo');
+        setFavoriteBuyers(mockFavorites);
       }
 
       setIsLoading(false);
     } catch (error) {
       console.error('Error loading favorites:', error);
+      // Show mock data as last resort
+      setFavoriteBuyers(mockFavorites);
       setIsLoading(false);
     }
   };
@@ -178,9 +181,11 @@ export default function FavouriteBuyersPage() {
       <View style={styles.content}>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Your Favourite Buyers</Text>
-          {apiFavorites.length > 0 && (
+          {apiFavorites.length > 0 ? (
             <Text style={styles.dataSourceIndicator}>📡 Live data</Text>
-          )}
+          ) : favoriteBuyers.length > 0 ? (
+            <Text style={styles.dataSourceIndicator}>🔧 Demo data</Text>
+          ) : null}
         </View>
         {isLoading ? (
           <View style={styles.loadingContainer}>
