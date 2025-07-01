@@ -1,0 +1,1 @@
+//get MONGO_USER and MONGO_PASS from .env and not use hardcoded passwords oky
