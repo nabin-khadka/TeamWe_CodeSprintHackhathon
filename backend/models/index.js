@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
-// Updated User Schema to include buyer/seller specific fields
+// Updated User Schema to match frontend fields
 const UserSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
+    name: { type: String, required: true }, // Changed from username to name
     phone: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, unique: true, sparse: true }, // Made optional initially
     password: { type: String, required: true },
-    userType: { type: String, enum: ['buyer', 'seller'], required: true },
-
+    userType: { type: String, enum: ['buyer', 'seller'], default: 'buyer' }, // Default to buyer
+    
     // Common fields
     profileImage: { type: String }, // URL to profile image
     address: { type: String },

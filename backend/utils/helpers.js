@@ -13,7 +13,7 @@ const validateEmail = (email) => {
 
 // Validate phone format (Nepal +977 format)
 const validatePhone = (phone) => {
-    return phone.startsWith('+977') && phone.length === 13;
+    return phone.startsWith('+977') && phone.length === 14;
 };
 
 // Format error response

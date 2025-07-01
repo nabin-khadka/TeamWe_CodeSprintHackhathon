@@ -28,11 +28,16 @@ const postingRoutes = require('./routes/postings');
 const orderRoutes = require('./routes/orders');
 const userRoutes = require('./routes/users');
 
-// Use routes
-app.use('/api/users', authRoutes);
-app.use('/api/users', userRoutes);
+// Use routes with correct paths
+app.use('/api/users', authRoutes);  // Auth routes under /api/users
+app.use('/api/users', userRoutes);  // User management routes under /api/users
 app.use('/api/postings', postingRoutes);
 app.use('/api/orders', orderRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
 
 // AI Image evaluation endpoint (kept in main server for now)
 app.post('/api/ai/evaluate-image', authenticate, async (req, res) => {

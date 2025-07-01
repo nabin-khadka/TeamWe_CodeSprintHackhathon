@@ -9,36 +9,25 @@ const router = express.Router();
 router.post('/register', async (req, res) => {
     try {
         const {
-            username,
-            email,
+            name,
             phone,
             password,
-            userType,
-            profileImage,
+            confirmPassword,
             address,
-            // Buyer specific
-            preferredCategories,
-            deliveryAddress,
-            // Seller specific
-            businessName,
-            businessType,
-            businessDescription,
-            businessImage,
-            businessLicense,
-            bankAccount,
-            contactInfo
+            profileImage,
+            userType = 'buyer' // Default to buyer
         } = req.body;
 
         // Basic validation
-        if (!username || !email || !phone || !password || !userType) {
+        if (!name || !phone || !password) {
             return res.status(400).json({
-                error: 'Please provide all required fields (username, email, phone, password, userType)'
+                error: 'Please provide all required fields (name, phone, password)'
             });
         }
 
-        // Validate user type
-        if (!['buyer', 'seller'].includes(userType)) {
-            return res.status(400).json({ error: 'User type must be either "buyer" or "seller"' });
+        // Password confirmation check
+        if (password !== confirmPassword) {
+            return res.status(400).json({ error: 'Passwords do not match' });
         }
 
         // Validate phone format
@@ -46,32 +35,15 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'Phone number must be in +977XXXXXXXXXX format' });
         }
 
-        // Email validation
-        if (!validateEmail(email)) {
-            return res.status(400).json({ error: 'Please provide a valid email address' });
-        }
-
-        // Seller specific validation
-        if (userType === 'seller') {
-            if (!businessName || !businessType || !contactInfo) {
-                return res.status(400).json({
-                    error: 'Sellers must provide business name, business type, and contact info'
-                });
-            }
-        }
-
         // Check if user already exists
-        const existingUser = await User.findOne({
-            $or: [{ username }, { email }, { phone }]
-        });
+        const existingUser = await User.findOne({ phone });
         if (existingUser) {
-            return res.status(400).json({ error: 'Username, email, or phone already in use' });
+            return res.status(400).json({ error: 'Phone number already registered' });
         }
 
         // Prepare user data
         const userData = {
-            username,
-            email,
+            name,
             phone,
             password, // TODO: Hash password for security
             userType,
@@ -82,18 +54,18 @@ router.post('/register', async (req, res) => {
         // Add user type specific data
         if (userType === 'buyer') {
             userData.buyerProfile = {
-                preferredCategories: preferredCategories || [],
-                deliveryAddress: deliveryAddress || address || ''
+                preferredCategories: [],
+                deliveryAddress: address || ''
             };
         } else if (userType === 'seller') {
             userData.sellerProfile = {
-                businessName,
-                businessType,
-                businessDescription: businessDescription || '',
-                businessImage: businessImage || '',
-                businessLicense: businessLicense || '',
-                bankAccount: bankAccount || '',
-                contactInfo,
+                businessName: '',
+                businessType: '',
+                businessDescription: '',
+                businessImage: '',
+                businessLicense: '',
+                bankAccount: '',
+                contactInfo: phone,
                 rating: 0
             };
         }
@@ -110,33 +82,20 @@ router.post('/register', async (req, res) => {
         });
         await session.save();
 
-        // Set cookie
-        res.cookie('session', token, {
-            httpOnly: true,
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
-
         // Prepare response data
         const responseData = {
             message: 'User registered successfully',
             userId: user._id,
             userType: user.userType,
+            token,
             user: {
-                username: user.username,
-                email: user.email,
+                name: user.name,
                 phone: user.phone,
                 userType: user.userType,
                 profileImage: user.profileImage,
                 address: user.address
             }
         };
-
-        // Add type-specific data to response
-        if (userType === 'buyer') {
-            responseData.user.buyerProfile = user.buyerProfile;
-        } else if (userType === 'seller') {
-            responseData.user.sellerProfile = user.sellerProfile;
-        }
 
         res.status(201).json(responseData);
 
@@ -149,14 +108,14 @@ router.post('/register', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { phone, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
+        if (!phone || !password) {
+            return res.status(400).json({ error: 'Phone and password are required' });
         }
 
         // Find user
-        const user = await User.findOne({ email, isActive: true });
+        const user = await User.findOne({ phone, isActive: true });
         if (!user || user.password !== password) { // TODO: Implement password hashing
             return res.status(401).json({ error: 'Invalid credentials' });
         }
@@ -172,20 +131,14 @@ router.post('/login', async (req, res) => {
 
         await session.save();
 
-        // Set cookie
-        res.cookie('session', token, {
-            httpOnly: true,
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
-
         // Prepare response
         const responseData = {
             message: 'Login successful',
             userId: user._id,
             userType: user.userType,
+            token,
             user: {
-                username: user.username,
-                email: user.email,
+                name: user.name,
                 phone: user.phone,
                 userType: user.userType,
                 profileImage: user.profileImage,

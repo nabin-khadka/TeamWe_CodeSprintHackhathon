@@ -8,7 +8,7 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-// Yaha ma sabai tabs ko layout banako chu, jastai mero notebook ma sabai pages cha!
+// Main navigation layout for logged-in users
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
@@ -16,20 +16,19 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false, // Header hide gareko chu, jastai cap launu parinna class ma!
+        headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
           },
           default: {},
         }),
       }}
-      initialRouteName="home" // Yaha home page lai default banako chu, jastai ghar nai sabai bhanda safe!
+      initialRouteName="home"
     >
-      {/* Yaha home tab cha, jastai ghar jane button! */}
+      {/* Home tab - Main dashboard */}
       <Tabs.Screen
         name="home"
         options={{
@@ -37,7 +36,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
-      {/* Yo chai favourite things ko tab, jastai mero man parne toys! */}
+
+      {/* History tab - Order/Transaction history */}
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />,
+        }}
+      />
+
+      {/* Favourites tab - Saved items */}
       <Tabs.Screen
         name="favourite"
         options={{
@@ -45,7 +54,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart.fill" color={color} />,
         }}
       />
-      {/* Profile tab ma mero sabai details cha, jastai school ID card ma! */}
+
+      {/* Profile tab - User settings and info */}
       <Tabs.Screen
         name="profile"
         options={{
@@ -53,42 +63,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
-      {/* Orders tab ma mero sabai kineko sabji cha, jastai ama ko shopping list! */}
+
+      {/* Login and register pages moved outside of tab layout */}
+
+      {/* Select page moved outside of tab layout */}
+
+      {/* Orders tab - Show user's past orders */}
       <Tabs.Screen
         name="orders"
         options={{
           title: 'Orders',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="bag.fill" color={color} />,
-        }}
-      />
-      {/* Yaha login page cha but tab ma dekhaudaina, jastai lukeko treasure! */}
-      <Tabs.Screen
-        name="login"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
-      {/* Register page pani lukayeko cha, jastai secret diary! */}
-      <Tabs.Screen
-        name="register"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
-      {/* Select page ma buyer ya seller choose garne, jastai game ma character choose garne! */}
-      <Tabs.Screen
-        name="select"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
-      {/* Home-buyer page for buyer mode, with different icons! */}
-      <Tabs.Screen
-        name="home-buyer"
-        options={{
-          title: 'Buyer Mode',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="cart.fill" color={color} />,
-          href: null, // Hide from tab bar initially, but can be activated when in buyer mode
         }}
       />
     </Tabs>

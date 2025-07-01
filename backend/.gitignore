@@ -13,3 +13,5 @@ coverage/
 .nyc_output/
 .vscode/
 .idea/
+.gitignore
+notes.txt*

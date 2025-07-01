@@ -10,12 +10,9 @@ export default function LoginPage() {
     const handleLogin = () => {
         // Determine if user is a buyer or seller (in a real app, this would come from authentication)
         const userType = 'buyer'; // Default to buyer for now
-        
-        if (userType === 'buyer') {
-            router.push("/(tabs)/home-buyer");
-        } else {
-            router.push("/(tabs)/home");
-        }
+
+        // Navigate to home tab which now includes the buyer functionality
+        router.push("/(tabs)/home");
     };
 
     const handleSignUp = () => {
@@ -38,8 +35,8 @@ export default function LoginPage() {
             {/* Yaha mathi app ko naam cha, jastai mero naam tag lagaunu parcha school ma! */}
             <View style={styles.header}>
                 <View style={styles.logoContainer}>
-                    <Image 
-                        source={require('../../assets/images/logo.png')} 
+                    <Image
+                        source={require('../assets/images/logo.png')}
                         style={styles.logo}
                         resizeMode="contain"
                     />
@@ -50,7 +47,7 @@ export default function LoginPage() {
             {/* Yaha ma mero phone number ra password lekhchu, jastai mero secret diary ma! */}
             <View style={styles.content}>
                 <Image
-                    source={require("../../assets/images/icon.png")}
+                    source={require("../assets/images/logo.png")}
                     style={styles.icon}
                     resizeMode="contain"
                 />
