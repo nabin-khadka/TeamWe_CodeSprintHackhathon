@@ -195,6 +195,9 @@ export const demandAPI = {
         url += `?${params.toString()}`;
       }
 
+      console.log('Making demand API request to:', url);
+      console.log('Using token:', token ? 'Present' : 'Missing');
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -203,15 +206,38 @@ export const demandAPI = {
         },
       });
 
+      console.log('Demand API response status:', response.status);
+      console.log('Demand API response headers:', response.headers);
+
       const data = await response.json();
+      console.log('Demand API response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch demands');
+        throw new Error(data.error || `HTTP ${response.status}: Failed to fetch demands`);
       }
 
       return data;
     } catch (error) {
       console.error('Get demands API error:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+
+        // Check for network errors
+        if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+          throw new Error('Network error: Please check your internet connection and ensure the server is running.');
+        }
+
+        // Check for server errors
+        if (error.message.includes('500') || error.message.includes('Internal server error')) {
+          throw new Error('Server error: The backend server encountered an issue. Please try again later.');
+        }
+
+        // Check for authentication errors
+        if (error.message.includes('401') || error.message.includes('Authentication')) {
+          throw new Error('Authentication error: Please log in again.');
+        }
+      }
       throw error;
     }
   },

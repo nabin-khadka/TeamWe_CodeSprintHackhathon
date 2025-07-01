@@ -126,7 +126,7 @@ export default function SellerHomePage() {
     try {
       const response = await demandAPI.getDemands();
       console.log('Fetched demands:', response); // Debug log
-      
+
       // Convert backend demand format to frontend format if needed
       const formattedDemands = response.map((demand: any, index: number) => ({
         id: index + 1, // Temporary ID for frontend
@@ -140,7 +140,7 @@ export default function SellerHomePage() {
         image: demand.images?.[0] || `https://via.placeholder.com/300x200/22c55e/ffffff?text=${encodeURIComponent(demand.productName)}`,
         postedDate: new Date(demand.createdAt).toISOString().split('T')[0]
       }));
-      
+
       setDemands(formattedDemands);
     } catch (error) {
       console.error('Error fetching demands:', error);
@@ -173,18 +173,25 @@ export default function SellerHomePage() {
     setViewBuyerModalVisible(true);
   };
 
-  const addBuyerToFavorites = (demand: Demand) => {
+  const addBuyerToFavorites = async (demand: Demand) => {
     const newFavorite = {
       id: demand.buyerId,
       name: demand.buyerName,
       address: demand.buyerAddress
     };
+    // Check if already in favorites
     const alreadyFavorite = favoriteBuyers.some(fav => fav.id === newFavorite.id);
     if (!alreadyFavorite) {
       const newFavorites = [...favoriteBuyers, newFavorite];
-      saveFavoriteBuyers(newFavorites);
-      Alert.alert("Added to Favorites", `${demand.buyerName} has been added to your favorites!`);
-      setViewBuyerModalVisible(false);
+      try {
+        await AsyncStorage.setItem('favoriteBuyers', JSON.stringify(newFavorites));
+        setFavoriteBuyers(newFavorites);
+        Alert.alert("Added to Favorites", `${demand.buyerName} has been added to your favorites!`);
+        setViewBuyerModalVisible(false);
+      } catch (error) {
+        console.error('Error saving favorite buyers:', error);
+        Alert.alert('Error', 'Could not save to favorites.');
+      }
     } else {
       Alert.alert("Already in Favorites", `${demand.buyerName} is already in your favorites!`);
     }

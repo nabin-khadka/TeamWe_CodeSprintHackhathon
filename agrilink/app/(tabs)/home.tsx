@@ -12,11 +12,36 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  Platform
+  Platform,
+  RefreshControl
 } from "react-native";
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from "expo-router";
+import { postingAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+
+// Interface for real API postings
+interface APIPosting {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  images: string[];
+  active: boolean;
+  sellerId?: {
+    _id?: string;
+    name?: string;
+    phone?: string;
+    sellerProfile?: {
+      businessName?: string;
+      contactInfo?: string;
+      rating?: number;
+    };
+  };
+  createdAt: string;
+}
 
 // Haii! I am telling about one sabji ko detail, like when I keep my toys in box and write what is inside!
 interface Product {
@@ -142,10 +167,15 @@ const mockDemands: Demand[] = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+
   // Check user type from AsyncStorage
   const [userType, setUserType] = useState<'buyer' | 'seller'>('buyer'); // Default to buyer
   const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [apiPostings, setApiPostings] = useState<APIPosting[]>([]);
   const [demands, setDemands] = useState<Demand[]>(mockDemands);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [viewBuyerModalVisible, setViewBuyerModalVisible] = useState(false);
@@ -170,7 +200,73 @@ export default function HomePage() {
   useEffect(() => {
     loadUserType();
     loadFavorites();
-  }, []);
+    if (isAuthenticated && userType === 'buyer') {
+      fetchPostings();
+    }
+  }, [isAuthenticated, userType]);
+
+  // Fetch real postings from API for buyers
+  const fetchPostings = async () => {
+    try {
+      setLoading(true);
+      const response = await postingAPI.getPostings();
+      console.log('Fetched postings:', response);
+      console.log('Response type:', typeof response);
+      console.log('Is array:', Array.isArray(response));
+
+      if (Array.isArray(response)) {
+        console.log('Processing', response.length, 'postings');
+        // Log a sample posting to check structure
+        if (response.length > 0) {
+          console.log('Sample posting:', JSON.stringify(response[0], null, 2));
+        }
+        const convertedProducts = response.map((posting, index) => {
+          try {
+            return convertPostingToProduct(posting);
+          } catch (error) {
+            console.error(`Error converting posting ${index}:`, error);
+            console.error('Problematic posting:', posting);
+            return null;
+          }
+        }).filter(Boolean); // Remove null entries
+
+        setApiPostings(response);
+        console.log('Successfully converted', convertedProducts.length, 'products');
+      } else if (response && Array.isArray(response.data)) {
+        setApiPostings(response.data);
+      } else {
+        console.error('Unexpected postings response format:', response);
+      }
+    } catch (error) {
+      console.error('Error fetching postings:', error);
+      Alert.alert('Error', 'Failed to load products. Using mock data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert API postings to Product format for compatibility
+  const convertPostingToProduct = (posting: APIPosting): Product => ({
+    id: parseInt(posting._id.substring(posting._id.length - 6), 16) || Math.floor(Math.random() * 1000000), // Use hex conversion or random number
+    productName: posting.title || 'Untitled Product',
+    price: posting.price || 0,
+    sellerName: posting.sellerId?.sellerProfile?.businessName || posting.sellerId?.name || 'Unknown Seller',
+    distance: "-- km", // Distance calculation would need location data
+    image: posting.images && posting.images.length > 0
+      ? posting.images[0]
+      : "https://images.unsplash.com/photo-1506084868230-bb9d95c24759?auto=format&fit=crop&w=400&q=80",
+    description: posting.description || 'No description available',
+    sellerId: parseInt(posting._id.substring(posting._id.length - 6), 16) || Math.floor(Math.random() * 1000000), // Use same ID format
+    sellerAddress: posting.sellerId?.sellerProfile?.contactInfo || posting.sellerId?.phone || "Contact seller for address"
+  });
+
+  // Get products to display (real API data for buyers, mock data as fallback)
+  const getProductsToDisplay = (): Product[] => {
+    if (userType === 'buyer' && apiPostings.length > 0) {
+      return apiPostings.map(convertPostingToProduct);
+    }
+    return products; // Fallback to mock data
+  };
 
   // Load user type from AsyncStorage
   const loadUserType = async () => {
@@ -328,6 +424,15 @@ export default function HomePage() {
 
   const handlePostProduct = () => {
     router.push("/(tabs)/post-product");
+  };
+
+  // Refresh function for pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (userType === 'buyer') {
+      await fetchPostings();
+    }
+    setRefreshing(false);
   };
 
   // PICKER FUNCTIONS
@@ -502,26 +607,27 @@ export default function HomePage() {
   };
 
   // BUYER INTERFACE COMPONENTS
-
-  const ProductCard = ({ item }: { item: Product }) => (
+  const ProductCard: React.FC<{ item: Product }> = ({ item }) => (
     <View style={styles.productCard}>
       <View style={styles.sellerInfo}>
         <View style={styles.sellerAvatar}>
-          <Text style={styles.sellerInitial}>{item.sellerName.charAt(0)}</Text>
+          <Text style={styles.sellerInitial}>
+            {(item.sellerName || 'U').charAt(0).toUpperCase()}
+          </Text>
         </View>
         <View style={styles.sellerDetails}>
-          <Text style={styles.sellerName}>{item.sellerName}</Text>
-          <Text style={styles.distance}>📍 {item.distance} away</Text>
+          <Text style={styles.sellerName}>{item.sellerName || 'Unknown Seller'}</Text>
+          <Text style={styles.distance}>📍 {item.distance || '-- km'} away</Text>
         </View>
       </View>
 
-      <Text style={styles.productName}>{item.productName}</Text>
-      <Text style={styles.productDescription}>{item.description}</Text>
+      <Text style={styles.productName}>{item.productName || 'Untitled Product'}</Text>
+      <Text style={styles.productDescription}>{item.description || 'No description available'}</Text>
 
-      <Image source={{ uri: item.image }} style={styles.productImage} />
+      <Image source={{ uri: item.image || 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?auto=format&fit=crop&w=400&q=80' }} style={styles.productImage} />
 
       <View style={styles.productFooter}>
-        <Text style={styles.price}>₹{item.price}</Text>
+        <Text style={styles.price}>₹{item.price || 0}</Text>
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.viewButton}
@@ -541,22 +647,23 @@ export default function HomePage() {
   );
 
   // SELLER INTERFACE COMPONENTS
-
-  const DemandCard = ({ item }: { item: Demand }) => (
+  const DemandCard: React.FC<{ item: Demand }> = ({ item }) => (
     <View style={styles.productCard}>
       <View style={styles.sellerInfo}>
         <View style={styles.sellerAvatar}>
-          <Text style={styles.sellerInitial}>{item.buyerName.charAt(0)}</Text>
+          <Text style={styles.sellerInitial}>
+            {(item.buyerName || 'U').charAt(0).toUpperCase()}
+          </Text>
         </View>
         <View style={styles.sellerDetails}>
-          <Text style={styles.sellerName}>{item.buyerName}</Text>
-          <Text style={styles.distance}>📍 {item.distance} away</Text>
+          <Text style={styles.sellerName}>{item.buyerName || 'Unknown Buyer'}</Text>
+          <Text style={styles.distance}>📍 {item.distance || '-- km'} away</Text>
         </View>
       </View>
 
-      <Text style={styles.productName}>{item.productName}</Text>
-      <Text style={styles.productQuantity}>Quantity: {item.quantity}</Text>
-      <Text style={styles.productDescription}>{item.description}</Text>
+      <Text style={styles.productName}>{item.productName || 'Untitled Product'}</Text>
+      <Text style={styles.productQuantity}>Quantity: {item.quantity || 'Not specified'}</Text>
+      <Text style={styles.productDescription}>{item.description || 'No description available'}</Text>
 
       {item.image && <Image source={{ uri: item.image }} style={styles.productImage} />}
 
@@ -590,7 +697,9 @@ export default function HomePage() {
       {/* Content based on user type */}
       {userType === 'buyer' ? (
         // BUYER VIEW
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false} refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
           {/* Quick Actions for Buyers */}
           <View style={styles.quickActionsContainer}>
             <Text style={styles.quickActionsTitle}>Quick Actions</Text>
@@ -613,15 +722,43 @@ export default function HomePage() {
           </View>
 
           <View style={styles.feedContainer}>
-            <Text style={styles.feedTitle}>Fresh Products Near You</Text>
-            {/* Yaha sabai sabji ko list cha, jastai ama ko market list! */}
-            <FlatList
-              data={products}
-              renderItem={({ item }) => <ProductCard item={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
+            <View style={styles.feedHeader}>
+              <Text style={styles.feedTitle}>Fresh Products Near You</Text>
+              {userType === 'buyer' && (
+                <TouchableOpacity
+                  onPress={fetchPostings}
+                  style={styles.refreshButton}
+                >
+                  <Text style={styles.refreshButtonText}>🔄</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {userType === 'buyer' && apiPostings.length > 0 && (
+              <Text style={styles.dataSourceIndicator}>📡 Live data from sellers</Text>
+            )}
+            {loading ? (
+              <ActivityIndicator size="large" color="#22c55e" style={{ margin: 20 }} />
+            ) : getProductsToDisplay().length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyStateText}>No products available</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  {userType === 'buyer' ? 'No sellers have posted products yet.' : 'Check back later for fresh products!'}
+                </Text>
+                {userType === 'buyer' && (
+                  <TouchableOpacity onPress={fetchPostings} style={styles.retryButton}>
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <FlatList
+                data={getProductsToDisplay()}
+                renderItem={({ item }) => <ProductCard item={item} />}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
           </View>
         </ScrollView>
       ) : (
@@ -1211,5 +1348,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     textAlign: 'center',
+  },
+  feedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
+  refreshButtonText: {
+    fontSize: 16,
+  },
+  dataSourceIndicator: {
+    fontSize: 12,
+    color: '#22c55e',
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

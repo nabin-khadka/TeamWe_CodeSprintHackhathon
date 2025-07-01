@@ -19,6 +19,20 @@ export default function MainLayout() {
     }
   }, [loading, isAuthenticated]);
 
+  // Redirect to correct home tab on initial load if on /home or /home1
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      // If on /home and user is seller, redirect to /home1
+      if ((current === 'home' && user.userType === 'seller')) {
+        router.replace('/home1');
+      }
+      // If on /home1 and user is buyer, redirect to /home
+      if ((current === 'home1' && user.userType === 'buyer')) {
+        router.replace('/home');
+      }
+    }
+  }, [loading, isAuthenticated, user, current]);
+
   // Show loading while checking authentication
   if (loading) {
     return (

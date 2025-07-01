@@ -12,7 +12,7 @@ import {
     TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { demandAPI } from '../../services/api';
+import { demandAPI, storage } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Demand {
@@ -72,11 +72,28 @@ export default function DemandListPage() {
             if (filterType) {
                 filters.productType = filterType;
             }
+            console.log('Fetching demands with filters:', filters);
             const response = await demandAPI.getDemands(filters);
-            setDemands(response);
+            console.log('Demands API response:', response);
+            console.log('Response type:', typeof response);
+            console.log('Response length:', Array.isArray(response) ? response.length : 'Not an array');
+
+            // Check if response is an array or needs to be accessed differently
+            if (Array.isArray(response)) {
+                setDemands(response);
+            } else if (response && response.demands && Array.isArray(response.demands)) {
+                setDemands(response.demands);
+            } else if (response && Array.isArray(response.data)) {
+                setDemands(response.data);
+            } else {
+                console.error('Unexpected response format:', response);
+                setDemands([]);
+            }
         } catch (error) {
             console.error('Error fetching demands:', error);
-            Alert.alert('Error', 'Failed to fetch demands. Please try again.');
+            console.error('Error details:', error instanceof Error ? error.message : String(error));
+            Alert.alert('Error', `Failed to fetch demands: ${error instanceof Error ? error.message : 'Please try again.'}`);
+            setDemands([]);
         } finally {
             setLoading(false);
         }
@@ -149,6 +166,27 @@ export default function DemandListPage() {
         { label: 'Vegetables', value: 'Vegetables' },
     ];
 
+    // Add this function for testing API connectivity
+    const testAPIConnection = async () => {
+        try {
+            console.log('Testing API connection...');
+            const token = await storage.getUserToken();
+            console.log('Token available:', !!token);
+
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://agrilink.tech';
+
+            // Test basic connectivity first
+            const healthResponse = await fetch(`${API_URL}/api/health`);
+            const healthData = await healthResponse.json();
+            console.log('Health check response:', healthData);
+
+            Alert.alert('API Test', `Health check: ${healthData.status}\nToken: ${token ? 'Available' : 'Missing'}`);
+        } catch (error) {
+            console.error('API test error:', error);
+            Alert.alert('API Test Failed', error instanceof Error ? error.message : String(error));
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
@@ -201,8 +239,20 @@ export default function DemandListPage() {
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyText}>No demands found</Text>
                         <Text style={styles.emptySubtext}>
-                            {filterType ? `No ${filterType.toLowerCase()} demands available` : 'No demands are currently posted'}
+                            {filterType ? `No ${filterType.toLowerCase()} demands available` : 'No demands are currently posted by buyers'}
                         </Text>
+                        <TouchableOpacity
+                            style={styles.refreshButton}
+                            onPress={() => fetchDemands()}
+                        >
+                            <Text style={styles.refreshButtonText}>Refresh</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.refreshButton, { backgroundColor: '#3b82f6', marginTop: 8 }]}
+                            onPress={testAPIConnection}
+                        >
+                            <Text style={styles.refreshButtonText}>Test API</Text>
+                        </TouchableOpacity>
                     </View>
                 ) : (
                     demands.map((demand) => (
@@ -552,6 +602,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalSubmitText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    refreshButton: {
+        backgroundColor: '#22c55e',
+        borderRadius: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        marginTop: 16,
+        alignItems: 'center',
+    },
+    refreshButtonText: {
         color: '#ffffff',
         fontSize: 16,
         fontWeight: 'bold',

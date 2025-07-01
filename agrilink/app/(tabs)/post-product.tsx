@@ -107,39 +107,92 @@ export default function PostProductPage() {
     }
   };
 
-  // Process image with PyTorch AI model (simulated)
+  // Process image with real Fruit Freshness AI API
   const processImageWithPyTorch = async (imageUri: string) => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing
-      const classifications = [
-        'Fresh Tomatoes', 'Organic Potatoes', 'Basmati Rice', 'Red Onions', 'Fresh Garlic', 'Green Spinach'
-      ];
-      const categories = [
-        'Vegetables', 'Vegetables', 'Grains', 'Vegetables', 'Vegetables', 'Vegetables'
-      ];
-      const randomIndex = Math.floor(Math.random() * classifications.length);
-      const result = classifications[randomIndex];
-      const detectedCategory = categories[randomIndex];
+      // Convert image to base64
+      const base64Image = await convertImageToBase64(imageUri);
+      
+      // Call the real AI API
+      const response = await fetch('http://api.agrilink.tech/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_base64: base64Image
+        }),
+      });
 
-      setClassificationResult(result);
-      setTitle(result);
-      setCategory(detectedCategory);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
 
-      const priceSuggestions: { [key: string]: string } = {
-        'Fresh Tomatoes': '25-30',
-        'Organic Potatoes': '20-25',
-        'Basmati Rice': '45-55',
-        'Red Onions': '15-20',
-        'Fresh Garlic': '40-45',
-        'Green Spinach': '15-20'
-      };
-      setSuggestedPrice(priceSuggestions[result] || '20-30');
+      const apiResult = await response.json();
+      const { result, confidence } = apiResult;
+      
+      // Process the API result
+      const freshnessStatus = result === 'fresh' ? 'Fresh' : 'Rotten';
+      const confidencePercentage = Math.round(confidence * 100);
+      
+      // Set classification result based on freshness
+      const classificationText = `${freshnessStatus} Fruit/Vegetable (${confidencePercentage}% confidence)`;
+      setClassificationResult(classificationText);
+      
+      // Only suggest posting if the produce is fresh
+      if (result === 'fresh') {
+        setTitle('Fresh Produce');
+        setCategory('Fruits'); // Default to fruits, user can change
+        setSuggestedPrice('25-35'); // Default price range
+      } else {
+        // If rotten, show warning and don't auto-fill
+        Alert.alert(
+          'Quality Warning',
+          `The AI detected this produce as ${result} with ${confidencePercentage}% confidence. Consider using fresher produce for better sales.`,
+          [{ text: 'OK' }]
+        );
+        setTitle('');
+        setCategory('');
+        setSuggestedPrice(null);
+      }
+      
     } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'Failed to process image. Please try again.');
+      console.error('Error processing image with AI:', error);
+      Alert.alert(
+        'AI Processing Error', 
+        'Failed to analyze image quality. You can still post manually.',
+        [{ text: 'OK' }]
+      );
+      // Set default values on error
+      setClassificationResult('AI Analysis Failed');
+      setTitle('');
+      setCategory('');
+      setSuggestedPrice(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Convert image URI to base64 string
+  const convertImageToBase64 = async (imageUri: string): Promise<string> => {
+    try {
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64String = reader.result as string;
+          // Remove the data:image/...;base64, prefix
+          const base64Data = base64String.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      throw new Error('Failed to convert image to base64');
     }
   };
 
@@ -237,7 +290,7 @@ export default function PostProductPage() {
             {isLoading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#22c55e" />
-                <Text style={styles.loadingText}>Processing with AI...</Text>
+                <Text style={styles.loadingText}>Analyzing freshness with AI...</Text>
               </View>
             )}
             {images.length > 0 && (
@@ -245,7 +298,7 @@ export default function PostProductPage() {
                 <Image source={{ uri: images[0] }} style={styles.imagePreview} />
                 {classificationResult && (
                   <View style={styles.aiResultContainer}>
-                    <Text style={styles.aiResultTitle}>AI Detection Result:</Text>
+                    <Text style={styles.aiResultTitle}>AI Freshness Analysis:</Text>
                     <Text style={styles.aiResultText}>{classificationResult}</Text>
                     {suggestedPrice && (
                       <Text style={styles.aiSuggestedPrice}>

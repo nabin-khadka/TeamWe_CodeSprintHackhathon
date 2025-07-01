@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Image, SafeAreaView, ScrollView, TouchableOpacity, FlatList } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Seller ko details for favorites, jastai mero favorite friends ko list ma info huncha!
 interface FavoriteSeller {
@@ -12,18 +14,28 @@ interface FavoriteSeller {
 export default function FavouritePage() {
   const [favorites, setFavorites] = useState<FavoriteSeller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadFavorites();
   }, []);
 
-  // Load favorites from AsyncStorage
+  // Reload favorites when tab is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      loadFavorites();
+    }, [])
+  );
+
+  // Load favorites from AsyncStorage (for buyers: favorite sellers)
   const loadFavorites = async () => {
     try {
       setIsLoading(true);
       const storedFavorites = await AsyncStorage.getItem('favorites');
       if (storedFavorites) {
         setFavorites(JSON.parse(storedFavorites));
+      } else {
+        setFavorites([]);
       }
       setIsLoading(false);
     } catch (error) {
