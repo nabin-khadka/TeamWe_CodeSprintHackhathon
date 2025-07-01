@@ -228,7 +228,9 @@ export default function SellerHomePage() {
       const updatedOrders = [newOrder, ...existingOrders];
       // Save updated orders back to AsyncStorage
       await AsyncStorage.setItem('sellerOrders', JSON.stringify(updatedOrders));
-      Alert.alert('Success', 'You have chosen to serve this demand. It is now in your order history.');
+      Alert.alert('Success', 'You have chosen to serve this demand. It is now in your order history.', [
+        { text: 'OK', onPress: () => router.push('/(tabs)/history1') }
+      ]);
     } catch (error) {
       console.error('Error serving demand:', error);
       Alert.alert('Error', 'Could not update your order history.');
