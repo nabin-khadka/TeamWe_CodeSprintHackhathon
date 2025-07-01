@@ -116,7 +116,7 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* Yaha sabai kura cha, jastai mero bag ma books ra pencil cha! */}
+      {/* Yaha sabai sabji haru cha, jastai mero toys ka collection! */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {userType === 'buyer' ? (
           <View style={styles.feedContainer}>
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center", // This centers the logo and app name
+    justifyContent: "center",
   },
   logo: {
     width: 32,

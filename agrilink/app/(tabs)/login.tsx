@@ -1,11 +1,11 @@
-import { useRouter } from "expo-router"; // add this import
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView } from "react-native";
 
 export default function LoginPage() {
     const [phone, setPhone] = useState("+977");
     const [password, setPassword] = useState("");
-    const router = useRouter(); // add this line
+    const router = useRouter();
 
     const handleLogin = () => {
         router.push("/home");
@@ -15,60 +15,107 @@ export default function LoginPage() {
         router.push("/register");
     };
 
-    // Ensure +977 stays at the start
+    // Ensure +977 stays at the start and exactly 10 digits after
     const handlePhoneChange = (text: string) => {
         if (!text.startsWith("+977")) {
             setPhone("+977");
         } else {
-            setPhone(text);
+            // Only allow exactly 10 digits after +977
+            const digits = text.slice(4).replace(/\D/g, "").slice(0, 10);
+            setPhone("+977" + digits);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <Image
-                source={require("../../assets/images/icon.png")}
-                style={styles.icon}
-                resizeMode="contain"
-            />
-            <Text style={styles.title}>Welcome Back!</Text>
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Phone Number"
-                    placeholderTextColor="#888"
-                    value={phone}
-                    onChangeText={handlePhoneChange}
-                    keyboardType="phone-pad"
-                    autoCapitalize="none"
-                    maxLength={13} // +977 + 10 digits
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="#888"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                />
+        <SafeAreaView style={styles.container}>
+            {/* Yaha mathi app ko naam cha, jastai mero naam tag lagaunu parcha school ma! */}
+            <View style={styles.header}>
+                <View style={styles.logoContainer}>
+                    <Image 
+                        source={require('../../assets/images/logo.png')} 
+                        style={styles.logo}
+                        resizeMode="contain"
+                    />
+                    <Text style={styles.appName}>AgroLink</Text>
+                </View>
             </View>
-            <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85}>
-                <Text style={styles.buttonText}>Login</Text>
-            </TouchableOpacity>
-            <Text style={styles.footerText}>
-                Don't have an account?{" "}
-                <Text style={styles.signup} onPress={handleSignUp}>Sign Up</Text>
-            </Text>
-        </View>
+
+            {/* Yaha ma mero phone number ra password lekhchu, jastai mero secret diary ma! */}
+            <View style={styles.content}>
+                <Image
+                    source={require("../../assets/images/icon.png")}
+                    style={styles.icon}
+                    resizeMode="contain"
+                />
+                <Text style={styles.title}>Welcome Back!</Text>
+                <View style={styles.inputContainer}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Phone Number"
+                        placeholderTextColor="#888"
+                        value={phone}
+                        onChangeText={handlePhoneChange}
+                        keyboardType="phone-pad"
+                        autoCapitalize="none"
+                        maxLength={14} // +977 + 10 digits
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Password"
+                        placeholderTextColor="#888"
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                    />
+                </View>
+                <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85}>
+                    <Text style={styles.buttonText}>Login</Text>
+                </TouchableOpacity>
+                <Text style={styles.footerText}>
+                    Don't have an account?{" "}
+                    <Text style={styles.signup} onPress={handleSignUp}>Sign Up</Text>
+                </Text>
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
+        backgroundColor: "#f8f9fa",
+    },
+    header: {
+        backgroundColor: "#ffffff",
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: "#e5e7eb",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    logoContainer: {
+        flexDirection: "row",
         alignItems: "center",
-        paddingTop: 60,
+        justifyContent: "center",
+    },
+    logo: {
+        width: 32,
+        height: 32,
+        marginRight: 10,
+    },
+    appName: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#22c55e",
+    },
+    content: {
+        flex: 1,
+        alignItems: "center",
+        paddingTop: 40,
     },
     icon: {
         width: 100,
