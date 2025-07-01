@@ -541,3 +541,93 @@ export const postingAPI = {
     }
   },
 };
+
+// API service for favorites
+export const favoritesAPI = {
+  // Get user's favorites
+  getFavorites: async () => {
+    try {
+      const token = await storage.getUserToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${API_URL}/api/favorites`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch favorites');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Get favorites API error:', error);
+      throw error;
+    }
+  },
+
+  // Add user to favorites
+  addToFavorites: async (userId: string) => {
+    try {
+      const token = await storage.getUserToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${API_URL}/api/favorites/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add to favorites');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Add to favorites API error:', error);
+      throw error;
+    }
+  },
+
+  // Remove user from favorites
+  removeFromFavorites: async (userId: string) => {
+    try {
+      const token = await storage.getUserToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${API_URL}/api/favorites/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to remove from favorites');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Remove from favorites API error:', error);
+      throw error;
+    }
+  },
+};

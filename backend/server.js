@@ -28,6 +28,7 @@ const postingRoutes = require('./routes/postings');
 const orderRoutes = require('./routes/orders');
 const userRoutes = require('./routes/users');
 const demandRoutes = require('./routes/demands');
+const favoritesRoutes = require('./routes/favorites');
 
 // Use routes with correct paths
 app.use('/api/users', authRoutes);  // Auth routes under /api/users
@@ -35,6 +36,7 @@ app.use('/api/users', userRoutes);  // User management routes under /api/users
 app.use('/api/postings', postingRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/demands', demandRoutes);
+app.use('/api/favorites', favoritesRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -30,6 +30,9 @@ const UserSchema = new mongoose.Schema({
         rating: { type: Number, default: 0 }
     },
 
+    // Favorites - array of user IDs that this user has favorited
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now }
 });

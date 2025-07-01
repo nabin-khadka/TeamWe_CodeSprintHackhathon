@@ -13,22 +13,67 @@ interface SellerOrder {
   status: 'pending' | 'confirmed' | 'delivered';
 }
 
+// Add mock serve and delivery orders for demonstration
+const mockServeOrders: SellerOrder[] = [
+  {
+    id: 201,
+    productName: "Fresh Tomatoes",
+    quantity: "10 kg",
+    buyerName: "Aarav Sharma",
+    buyerAddress: "123 Mountain View, Kathmandu",
+    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Tomatoes",
+    orderDate: "2025-06-29",
+    status: 'pending',
+  },
+  {
+    id: 202,
+    productName: "Premium Rice Grain",
+    quantity: "25 kg",
+    buyerName: "Priya Gurung",
+    buyerAddress: "45 Valley Road, Pokhara",
+    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Rice",
+    orderDate: "2025-06-28",
+    status: 'confirmed',
+  },
+  {
+    id: 203,
+    productName: "Organic Potatoes",
+    quantity: "5 kg",
+    buyerName: "Rajan Thapa",
+    buyerAddress: "78 Lake View, Chitwan",
+    image: "https://via.placeholder.com/300x200/22c55e/ffffff?text=Potatoes",
+    orderDate: "2025-06-25",
+    status: 'delivered',
+  },
+];
+
 export default function SellerHistoryPage() {
   const [orders, setOrders] = useState<SellerOrder[]>([]);
+  const [serveOrders, setServeOrders] = useState<SellerOrder[]>([]);
+  const [deliveryOrders, setDeliveryOrders] = useState<SellerOrder[]>([]);
 
   useEffect(() => {
     loadSellerOrders();
   }, []);
 
-  // Load seller orders from AsyncStorage
+  // Load seller orders from AsyncStorage and add mock serve/delivery orders
   const loadSellerOrders = async () => {
     try {
       const storedOrders = await AsyncStorage.getItem('sellerOrders');
+      let parsedOrders: SellerOrder[] = [];
       if (storedOrders) {
-        setOrders(JSON.parse(storedOrders));
-      } else {
-        setOrders([]);
+        parsedOrders = JSON.parse(storedOrders);
       }
+      // Separate serve and delivery orders by status
+      setServeOrders([
+        ...parsedOrders.filter(o => o.status === 'pending' || o.status === 'confirmed'),
+        ...mockServeOrders.filter(o => o.status === 'pending' || o.status === 'confirmed')
+      ]);
+      setDeliveryOrders([
+        ...parsedOrders.filter(o => o.status === 'delivered'),
+        ...mockServeOrders.filter(o => o.status === 'delivered')
+      ]);
+      setOrders(parsedOrders);
     } catch (error) {
       console.error('Error loading seller orders:', error);
     }
@@ -77,10 +122,10 @@ export default function SellerHistoryPage() {
         </View>
       </View>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>Order Requests</Text>
-        {orders.length > 0 ? (
+        <Text style={styles.pageTitle}>Served Order Requests</Text>
+        {serveOrders.length > 0 ? (
           <FlatList
-            data={orders}
+            data={serveOrders}
             renderItem={({ item }) => <OrderCard item={item} />}
             keyExtractor={(item) => item.id.toString()}
             scrollEnabled={false}
@@ -88,8 +133,23 @@ export default function SellerHistoryPage() {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No order requests yet</Text>
+            <Text style={styles.emptyText}>No served order requests yet</Text>
             <Text style={styles.emptySubtext}>Order requests from buyers will appear here</Text>
+          </View>
+        )}
+        <Text style={styles.pageTitle}>Delivered Orders</Text>
+        {deliveryOrders.length > 0 ? (
+          <FlatList
+            data={deliveryOrders}
+            renderItem={({ item }) => <OrderCard item={item} />}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No delivered orders yet</Text>
+            <Text style={styles.emptySubtext}>Delivered orders will appear here</Text>
           </View>
         )}
       </ScrollView>
